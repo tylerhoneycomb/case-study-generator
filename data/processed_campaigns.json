@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "seededAtISO": null,
+  "seedNote": "Seed this file with every currently-Funded slug before first cron run (spec v3.3 § 13).",
+  "slugs": []
+}
