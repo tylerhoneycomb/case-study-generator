@@ -42,7 +42,22 @@ npm run check-campaigns        # runs tsc then executes dist/index.js
 
 ## Running on GitHub Actions
 
+### Daily cron
 Scheduled daily at 10 AM ET (`cron: '0 14 * * *'`). Manual trigger: Actions tab → "Daily Campaign Check" → Run workflow.
+
+### Backfill historical Funded campaigns
+Actions tab → "Backfill Case Studies" → Run workflow. Inputs (provide at least one):
+- `slugs` — comma-separated Honeycomb slugs (verbatim, e.g. `Savory-Crust,Brothmonger-Brooklyn-Bone-Broth`).
+- `business_names` — comma-separated queries; case-insensitive substring match against the seeded slug list.
+- `from_date` / `to_date` — `YYYY-MM-DD` close-date range; filters by `campaignExpirationDate`. Wide ranges scrape every seed slug to read the date, which is slow (5–10 min for the full 371-slug seed).
+
+Skips any candidate that already has a CMS entry (use Rebuild for those).
+
+### Rebuild an existing case study
+Actions tab → "Rebuild Case Study" → Run workflow. Input:
+- `slugs` — comma-separated **case-study slugs** (the Wix slug, lowercase-hyphenated; e.g. `brothmonger-brooklyn-bone-broth`), not the Honeycomb slug.
+
+Patches the existing CMS row in place (URL preserved), overwrites the hero image, resets `status` to `draft` so it goes back through review.
 
 ## Pre-flight before enabling cron
 
