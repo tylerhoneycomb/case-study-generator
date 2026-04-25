@@ -15,10 +15,14 @@ export function loadSmtpConfig(): SmtpConfig {
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const recipient = process.env.NOTIFY_RECIPIENT;
-  if (!user || !pass || !recipient) {
-    throw new Error('SMTP_USER, SMTP_PASS, NOTIFY_RECIPIENT required');
+  const missing: string[] = [];
+  if (!user) missing.push('SMTP_USER');
+  if (!pass) missing.push('SMTP_PASS');
+  if (!recipient) missing.push('NOTIFY_RECIPIENT');
+  if (missing.length > 0) {
+    throw new Error(`Missing required env var(s): ${missing.join(', ')}`);
   }
-  return { host, port, user, pass, recipient };
+  return { host, port, user: user!, pass: pass!, recipient: recipient! };
 }
 
 function buildTransport(cfg: SmtpConfig): Transporter {
