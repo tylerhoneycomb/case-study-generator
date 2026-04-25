@@ -34,9 +34,24 @@ function buildTransport(cfg: SmtpConfig): Transporter {
   });
 }
 
+export type CampaignEmailMode = 'create' | 'rebuild' | 'backfill';
+
+const SUBJECT_PREFIX: Record<CampaignEmailMode, string> = {
+  create: 'New case study draft ready',
+  rebuild: 'Case study rebuilt',
+  backfill: 'Backfilled case study draft ready',
+};
+
+const BODY_INTRO: Record<CampaignEmailMode, string> = {
+  create: 'New case study draft ready for review.',
+  rebuild: 'Case study has been rebuilt. Review and re-publish.',
+  backfill: 'Backfilled case study draft ready for review.',
+};
+
 export async function sendPerCampaignEmail(
   report: CampaignReport,
   cfg: SmtpConfig,
+  mode: CampaignEmailMode = 'create',
 ): Promise<void> {
   const status = report.humanizationChecked
     ? 'PASSED humanization validator.'
@@ -46,7 +61,7 @@ export async function sendPerCampaignEmail(
     : '';
 
   const body = [
-    `New case study draft ready for review.`,
+    BODY_INTRO[mode],
     ``,
     `Business: ${report.businessName}`,
     `Industry: ${report.industry}`,
@@ -65,7 +80,7 @@ export async function sendPerCampaignEmail(
   await buildTransport(cfg).sendMail({
     from: cfg.user,
     to: cfg.recipient,
-    subject: `New case study draft ready: ${report.businessName}`,
+    subject: `${SUBJECT_PREFIX[mode]}: ${report.businessName}`,
     text: body,
   });
 }
