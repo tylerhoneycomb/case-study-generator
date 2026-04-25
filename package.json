@@ -7,6 +7,8 @@
   "scripts": {
     "build": "tsc",
     "check-campaigns": "tsc && node dist/index.js",
+    "rebuild": "tsc && node dist/rebuild.js",
+    "backfill": "tsc && node dist/backfill.js",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit"
   },
