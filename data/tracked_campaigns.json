@@ -1,5 +1,52 @@
 {
   "version": 1,
-  "lastSyncISO": null,
-  "campaigns": {}
+  "lastSyncISO": "2026-04-25T20:55:19.734Z",
+  "campaigns": {
+    "Harding-House-Brewing-Co": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z",
+      "lastCheckedISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Arthur-Wheeler-Spirits-Company": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z",
+      "lastCheckedISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Green-Liberty-Notes-by-Connecticut-Green-Bank-16th-Offer": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Northern-Skies-MI": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Punta-Morada": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z",
+      "lastCheckedISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Colored-Girl's-Cuisine": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z",
+      "lastCheckedISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Jivamukti-Yoga": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z",
+      "lastCheckedISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Cottage-Bites": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Coffee-House-Amenia": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z",
+      "lastCheckedISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Lone-Wolf": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-25T20:55:19.734Z"
+    }
+  }
 }
