@@ -1,9 +1,8 @@
 import {
   RunReport,
-  CampaignReport,
   CampaignFailure,
 } from './types';
-import { fetchListing, fetchCampaign, ScrapeError } from './scraper';
+import { fetchListing, fetchCampaign } from './scraper';
 import {
   loadTracked,
   saveTracked,
@@ -14,47 +13,17 @@ import {
   candidatesForTransitionCheck,
   markProcessed,
 } from './tracker';
-import {
-  buildPromptInput,
-  generateCaseStudy,
-  GenerationError,
-} from './generator';
-import {
-  uploadHeroImage,
-  buildWixItem,
-  insertCaseStudy,
-  WixError,
-} from './wix';
+import { processSlugCreate, classifyError } from './pipeline';
 import {
   loadSmtpConfig,
   sendPerCampaignEmail,
   sendSummaryEmail,
 } from './notifier';
 
-const PUBLIC_BASE = 'https://honeycombcredit.com/case-studies/';
-
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) throw new Error(`${name} required`);
   return v;
-}
-
-function wixCmsLink(siteId: string, itemId: string): string {
-  return `https://manage.wix.com/dashboard/${siteId}/database/data/CaseStudies/${itemId}`;
-}
-
-function failureFor(slug: string, err: unknown): CampaignFailure {
-  if (err instanceof ScrapeError) return { slug, stage: 'scrape', message: err.message };
-  if (err instanceof GenerationError) return { slug, stage: 'generate', message: err.message };
-  if (err instanceof WixError) {
-    const stage =
-      err.stage.startsWith('media') ? 'upload'
-      : err.stage.startsWith('data') ? 'insert'
-      : 'unknown';
-    return { slug, stage: stage as CampaignFailure['stage'], message: err.message };
-  }
-  const e = err as Error;
-  return { slug, stage: 'unknown', message: e.message ?? String(err) };
 }
 
 async function main(): Promise<number> {
@@ -78,6 +47,7 @@ async function main(): Promise<number> {
       apiKey: requireEnv('WIX_API_KEY'),
       siteId: requireEnv('WIX_SITE_ID'),
     };
+    const deps = { anthropicKey, wixAuth, todayISO };
 
     const tracked = await loadTracked();
     const processed = await loadProcessed();
@@ -106,58 +76,43 @@ async function main(): Promise<number> {
     report.rechecked = candidates.length;
 
     for (const slug of candidates) {
-      let payload;
+      let stage: string;
       try {
-        payload = await fetchCampaign(slug);
+        const payload = await fetchCampaign(slug);
+        stage = payload.campaignData.campaignStage;
+        updateStage(tracked, slug, stage, todayISO);
       } catch (err) {
-        report.failures.push(failureFor(slug, err));
+        const f = classifyError(err);
+        report.failures.push({ slug, ...f } as CampaignFailure);
         continue;
       }
-      const stage = payload.campaignData.campaignStage;
-      updateStage(tracked, slug, stage, todayISO);
       if (stage !== 'Funded') continue;
 
-      // Step 3-6: generate, upload, insert, notify.
+      // Funded: run the create pipeline.
       try {
-        const input = buildPromptInput(payload.campaignData, todayISO);
-        const generated = await generateCaseStudy(input, anthropicKey);
-
-        if (!payload.ogImageUrl) {
-          throw new WixError('campaign missing ogImageUrl', 'media-fetch');
+        const outcome = await processSlugCreate(slug, deps);
+        if (!outcome.ok) {
+          report.failures.push({
+            slug,
+            stage: 'insert',
+            message: outcome.message,
+          });
+          continue;
         }
-        const heroMediaUrl = await uploadHeroImage(payload.ogImageUrl, wixAuth);
-
-        const wixItem = buildWixItem(generated, payload.campaignData, todayISO, heroMediaUrl);
-        const result = await insertCaseStudy(wixItem, wixAuth);
-
-        const campaignReport: CampaignReport = {
-          slug,
-          businessName: wixItem.businessName,
-          industry: wixItem.industry,
-          niche: wixItem.niche,
-          amountRaisedFormatted: wixItem.amountRaisedFormatted,
-          investorCount: wixItem.investorCount,
-          wixItemId: result._id,
-          wixCmsUrl: wixCmsLink(wixAuth.siteId, result._id),
-          publicPreviewUrl: PUBLIC_BASE + wixItem.slug,
-          humanizationChecked: result.humanizationChecked,
-          humanizationIssues: result.humanizationIssues,
-        };
-        report.processed.push(campaignReport);
+        report.processed.push(outcome.report);
         markProcessed(processed, slug);
-
         try {
-          await sendPerCampaignEmail(campaignReport, smtp);
+          await sendPerCampaignEmail(outcome.report, smtp, 'create');
         } catch (err) {
           report.failures.push({ slug, stage: 'notify', message: (err as Error).message });
         }
       } catch (err) {
-        report.failures.push(failureFor(slug, err));
+        const f = classifyError(err);
+        report.failures.push({ slug, ...f } as CampaignFailure);
       }
     }
 
     report.trackedCount = Object.keys(tracked.campaigns).length;
-
     await saveTracked(tracked);
     await saveProcessed(processed);
   } catch (err) {

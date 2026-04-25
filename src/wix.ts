@@ -215,3 +215,78 @@ export async function insertCaseStudy(
         : null,
   };
 }
+
+export async function findItemBySlug(
+  slug: string,
+  auth: WixAuth,
+): Promise<string | null> {
+  const res = await fetch('https://www.wixapis.com/wix-data/v2/items/query', {
+    method: 'POST',
+    headers: { ...authHeaders(auth), 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      dataCollectionId: COLLECTION_ID,
+      query: {
+        filter: { slug: { $eq: slug } },
+        paging: { limit: 1 },
+      },
+    }),
+  });
+  if (!res.ok) {
+    throw new WixError(
+      `query HTTP ${res.status}: ${await res.text()}`,
+      'data-query',
+    );
+  }
+  const json = (await res.json()) as {
+    dataItems?: Array<{ _id?: string; id?: string }>;
+  };
+  const first = json.dataItems?.[0];
+  return first ? first._id || first.id || null : null;
+}
+
+export async function updateCaseStudy(
+  itemId: string,
+  item: WixCaseStudyItem,
+  auth: WixAuth,
+): Promise<WixInsertResult> {
+  const updateRes = await fetch(
+    `https://www.wixapis.com/wix-data/v2/items/${encodeURIComponent(itemId)}`,
+    {
+      method: 'PUT',
+      headers: { ...authHeaders(auth), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dataCollectionId: COLLECTION_ID,
+        dataItem: { data: { ...item, _id: itemId } },
+      }),
+    },
+  );
+  if (!updateRes.ok) {
+    throw new WixError(
+      `update HTTP ${updateRes.status}: ${await updateRes.text()}`,
+      'data-update',
+    );
+  }
+
+  const getUrl = `https://www.wixapis.com/wix-data/v2/items/${encodeURIComponent(
+    itemId,
+  )}?dataCollectionId=${COLLECTION_ID}`;
+  const getRes = await fetch(getUrl, { headers: authHeaders(auth) });
+  if (!getRes.ok) {
+    throw new WixError(
+      `post-update fetch HTTP ${getRes.status}: ${await getRes.text()}`,
+      'data-fetch',
+    );
+  }
+  const getJson = (await getRes.json()) as {
+    dataItem?: { data?: Record<string, unknown> };
+  };
+  const data = getJson.dataItem?.data ?? {};
+  return {
+    _id: itemId,
+    humanizationChecked: Boolean(data.humanizationChecked),
+    humanizationIssues:
+      typeof data.humanizationIssues === 'string'
+        ? (data.humanizationIssues as string)
+        : null,
+  };
+}
