@@ -153,7 +153,9 @@ export function buildWixItem(
     ogTitle: generated.ogTitle,
     ogDescription: generated.ogDescription,
     ogImage: heroMediaUrl,
-    canonicalOverride: '',
+    // canonicalOverride intentionally omitted — Wix URL field rejects empty
+    // strings. Reviewer can populate it manually in CMS if a canonical
+    // override is ever needed.
     ctaText: generated.ctaText,
     ctaUrl: STATIC_CTA_URL,
     campaignUrl: CAMPAIGN_URL_BASE + (campaign.slug ?? ''),

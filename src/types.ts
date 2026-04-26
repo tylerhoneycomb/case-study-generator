@@ -160,7 +160,7 @@ export interface WixCaseStudyItem {
   ogTitle: string;
   ogDescription: string;
   ogImage: string;
-  canonicalOverride: string;
+  canonicalOverride?: string;
   ctaText: string;
   ctaUrl: string;
   campaignUrl: string;
