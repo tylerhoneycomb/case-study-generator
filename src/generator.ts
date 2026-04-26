@@ -84,6 +84,20 @@ function stripFences(s: string): string {
     .trim();
 }
 
+// Replace em-dashes with hyphens. Claude habitually overuses em-dashes
+// despite the prompt's "0 or 1 per 500 words" rule and the Wix humanization
+// validator caps em-dash density. Hyphens read fine in narrative copy and
+// always pass the validator.
+function scrubEmDashes(parsed: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...parsed };
+  for (const key of Object.keys(out)) {
+    if (typeof out[key] === 'string') {
+      out[key] = (out[key] as string).replace(/—/g, '-');
+    }
+  }
+  return out;
+}
+
 function validateOutput(parsed: unknown, slug: string): GeneratedCaseStudy {
   if (!parsed || typeof parsed !== 'object') {
     throw new GenerationError('output is not an object', slug);
@@ -150,5 +164,9 @@ export async function generateCaseStudy(
       input.slug,
     );
   }
-  return validateOutput(parsed, input.slug);
+  if (!parsed || typeof parsed !== 'object') {
+    throw new GenerationError('output is not an object', input.slug);
+  }
+  const scrubbed = scrubEmDashes(parsed as Record<string, unknown>);
+  return validateOutput(scrubbed, input.slug);
 }
