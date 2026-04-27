@@ -1,16 +1,16 @@
 {
   "version": 1,
-  "lastSyncISO": "2026-04-26T16:07:17.156Z",
+  "lastSyncISO": "2026-04-27T17:56:57.195Z",
   "campaigns": {
     "Harding-House-Brewing-Co": {
       "lastKnownStage": "Fundraising",
       "firstSeenISO": "2026-04-25T20:55:19.734Z",
-      "lastCheckedISO": "2026-04-26T16:07:17.156Z"
+      "lastCheckedISO": "2026-04-27T17:56:57.195Z"
     },
     "Arthur-Wheeler-Spirits-Company": {
       "lastKnownStage": "Fundraising",
       "firstSeenISO": "2026-04-25T20:55:19.734Z",
-      "lastCheckedISO": "2026-04-26T16:07:17.156Z"
+      "lastCheckedISO": "2026-04-27T17:56:57.195Z"
     },
     "Green-Liberty-Notes-by-Connecticut-Green-Bank-16th-Offer": {
       "lastKnownStage": "Fundraising",
@@ -23,17 +23,17 @@
     "Punta-Morada": {
       "lastKnownStage": "Fundraising",
       "firstSeenISO": "2026-04-25T20:55:19.734Z",
-      "lastCheckedISO": "2026-04-26T16:07:17.156Z"
+      "lastCheckedISO": "2026-04-27T17:56:57.195Z"
     },
     "Colored-Girl's-Cuisine": {
       "lastKnownStage": "Fundraising",
       "firstSeenISO": "2026-04-25T20:55:19.734Z",
-      "lastCheckedISO": "2026-04-26T16:07:17.156Z"
+      "lastCheckedISO": "2026-04-27T17:56:57.195Z"
     },
     "Jivamukti-Yoga": {
       "lastKnownStage": "Fundraising",
       "firstSeenISO": "2026-04-25T20:55:19.734Z",
-      "lastCheckedISO": "2026-04-26T16:07:17.156Z"
+      "lastCheckedISO": "2026-04-27T17:56:57.195Z"
     },
     "Cottage-Bites": {
       "lastKnownStage": "Fundraising",
@@ -42,11 +42,15 @@
     "Coffee-House-Amenia": {
       "lastKnownStage": "Fundraising",
       "firstSeenISO": "2026-04-25T20:55:19.734Z",
-      "lastCheckedISO": "2026-04-26T16:07:17.156Z"
+      "lastCheckedISO": "2026-04-27T17:56:57.195Z"
     },
     "Lone-Wolf": {
       "lastKnownStage": "Fundraising",
       "firstSeenISO": "2026-04-25T20:55:19.734Z"
+    },
+    "Green-Compass-Climate-Impact-Note-2nd-Offer": {
+      "lastKnownStage": "Fundraising",
+      "firstSeenISO": "2026-04-27T17:56:57.195Z"
     }
   }
 }
