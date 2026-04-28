@@ -36,14 +36,15 @@ export const INDUSTRIES = [
 
 export type Industry = (typeof INDUSTRIES)[number];
 
-// Lenient schema for the JSON-LD blob. Claude returns a parsed object;
-// scripts/generate.ts validates it parses and stays under 8 KB before commit.
-const systemSchemaJsonShape = z
-  .record(z.string(), z.unknown())
-  .refine(
-    (obj) => typeof obj['@context'] === 'string' && '@graph' in obj,
-    { message: 'systemSchemaJson must be a JSON-LD document with @context and @graph.' }
-  );
+// Lenient schema for the JSON-LD blob. Per the runtime prompt §9, Claude
+// returns an array of two typed entities (LocalBusiness/subtype + Article).
+// We also accept a single typed object or an @graph wrapper for resilience.
+// Structural validation lives in scripts/lib/claude.ts isValidJsonLd();
+// here we just gate on shape (object or array).
+const systemSchemaJsonShape = z.union([
+  z.array(z.record(z.string(), z.unknown())).min(1),
+  z.record(z.string(), z.unknown()),
+]);
 
 const caseStudy = defineCollection({
   type: 'content',
