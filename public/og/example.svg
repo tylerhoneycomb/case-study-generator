@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6F3E5"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="200" height="630" fill="#FFDE17"/>
+  <g transform="translate(280,180)">
+    <rect x="0" y="0" width="60" height="60" fill="#FFDE17"/>
+    <rect x="70" y="0" width="60" height="60" fill="#3F296B"/>
+    <rect x="140" y="0" width="60" height="60" fill="#59B16B"/>
+  </g>
+  <text x="280" y="320" font-family="Raleway, system-ui, sans-serif" font-size="72" font-weight="700" fill="#222222">funded.honeycombcredit.com</text>
+  <text x="280" y="380" font-family="Open Sans, system-ui, sans-serif" font-size="28" fill="#222222" opacity="0.7">Phase 2 placeholder · brand layout preview</text>
+  <rect x="280" y="430" width="640" height="60" fill="#FFDE17"/>
+  <text x="304" y="470" font-family="Open Sans, system-ui, sans-serif" font-size="22" font-weight="600" fill="#222222">Real businesses, funded by their communities.</text>
+</svg>

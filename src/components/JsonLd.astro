@@ -1,0 +1,17 @@
+---
+// Emits the systemSchemaJson payload as a JSON-LD <script> in <head>.
+// Claude returns this as a parsed object; the schema validates it parses to
+// a JSON-LD shape. We stringify here at render time without modification.
+//
+// XSS surface: the source data is the agent's own structured output, not
+// user input — but as belt-and-suspenders we escape `</script` to defuse the
+// classic JSON-LD breakout vector if any future input ever contains it.
+
+interface Props {
+  data: Record<string, unknown>;
+}
+
+const { data } = Astro.props;
+const json = JSON.stringify(data).replace(/<\/script/gi, '<\\/script');
+---
+<script type="application/ld+json" set:html={json}></script>

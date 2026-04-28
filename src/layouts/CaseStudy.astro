@@ -1,0 +1,80 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseHead from '~/components/BaseHead.astro';
+import SiteHeader from '~/components/SiteHeader.astro';
+import SiteFooter from '~/components/SiteFooter.astro';
+import Hero from '~/components/Hero.astro';
+import MetricsStrip from '~/components/MetricsStrip.astro';
+import Quote from '~/components/Quote.astro';
+import Cta from '~/components/Cta.astro';
+import JsonLd from '~/components/JsonLd.astro';
+
+interface Props {
+  entry: CollectionEntry<'case-studies'>;
+}
+
+const { entry } = Astro.props;
+const d = entry.data;
+
+// Resolve the OG image to an absolute URL so social-share crawlers can fetch
+// it. Both heroImage and ogImage are root-relative paths under /og/.
+const ogPath = d.ogImage ?? d.heroImage;
+const siteOrigin = (Astro.site ?? new URL('https://funded.honeycombcredit.com')).origin;
+const ogImageUrl = new URL(ogPath, siteOrigin).toString();
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead
+      title={d.metaTitle}
+      description={d.metaDescription}
+      ogTitle={d.ogTitle}
+      ogDescription={d.ogDescription}
+      ogImageUrl={ogImageUrl}
+      canonical={d.canonicalOverride}
+      publishedTime={d.publishedDate.toISOString()}
+    />
+    <JsonLd data={d.systemSchemaJson} />
+  </head>
+  <body class="font-sans">
+    <SiteHeader />
+    <main>
+      <Hero
+        h1Heading={d.h1Heading}
+        heroSubhead={d.heroSubhead}
+        heroImage={d.heroImage}
+        heroImageAlt={d.heroImageAlt}
+        businessName={d.businessName}
+        amountRaisedFormatted={d.amountRaisedFormatted}
+        investorCount={d.investorCount}
+        city={d.city}
+        state={d.state}
+      />
+      <MetricsStrip
+        amountRaisedFormatted={d.amountRaisedFormatted}
+        goalAmountFormatted={d.goalAmountFormatted}
+        percentOfGoalFormatted={d.percentOfGoalFormatted}
+        investorCount={d.investorCount}
+        timeToFund={d.timeToFund}
+      />
+
+      <section class="mx-auto max-w-5xl px-6 mt-16">
+        <h2 class="font-display text-3xl leading-tight max-w-3xl">{d.storyHeading}</h2>
+        <div class="article-prose mt-6">
+          <slot />
+        </div>
+      </section>
+
+      {d.quote && <Quote quote={d.quote} attribution={d.quoteAttribution} />}
+
+      <Cta ctaText={d.ctaText} ctaUrl={d.ctaUrl} campaignUrl={d.campaignUrl} />
+
+      <footer class="mx-auto max-w-5xl px-6 mt-16">
+        <p class="font-sans text-xs uppercase tracking-[0.18em] text-honeycomb-ink/60">
+          {d.industry} · {d.niche} · Published {d.publishedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+        </p>
+      </footer>
+    </main>
+    <SiteFooter />
+  </body>
+</html>

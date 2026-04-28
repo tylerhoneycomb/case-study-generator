@@ -1,20 +1,79 @@
 ---
-import '~/styles/global.css';
+import { getCollection } from 'astro:content';
+import BaseHead from '~/components/BaseHead.astro';
+import SiteHeader from '~/components/SiteHeader.astro';
+import SiteFooter from '~/components/SiteFooter.astro';
+
+const all = await getCollection('case-studies', ({ id }) => !id.startsWith('_'));
+const studies = all
+  .slice()
+  .sort((a, b) => b.data.publishedDate.getTime() - a.data.publishedDate.getTime());
+
+const description = 'Stories of real small businesses that raised capital from their communities through Honeycomb Credit. Real outcomes, real numbers, real owners.';
 ---
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>funded.honeycombcredit.com</title>
-    <meta name="robots" content="noindex" />
+    <BaseHead
+      title="Funded — small businesses raising on Honeycomb Credit"
+      description={description}
+    />
   </head>
-  <body class="font-sans antialiased">
-    <main class="mx-auto max-w-2xl p-8">
-      <h1 class="text-3xl font-semibold">funded.honeycombcredit.com</h1>
-      <p class="mt-4 text-neutral-700">
-        Phase 1 placeholder. Case studies will appear here.
+  <body class="font-sans">
+    <SiteHeader />
+    <main class="mx-auto max-w-5xl px-6 py-16">
+      <p class="font-sans text-sm font-semibold uppercase tracking-[0.2em] text-honeycomb-purple">
+        Funded by their community
       </p>
+      <h1 class="mt-3 font-display text-5xl leading-[1.05] sm:text-6xl">
+        Real small businesses,<br />
+        funded by the people who love them.
+      </h1>
+      <p class="mt-6 max-w-2xl text-xl leading-snug text-honeycomb-ink/80">
+        Every story below is a Honeycomb Credit campaign that hit its goal.
+        Same growth questions you&rsquo;re probably asking — answered by the
+        owners who lived through it.
+      </p>
+
+      {studies.length === 0 ? (
+        <section class="mt-16 max-w-3xl rounded-md bg-honeycomb-cream border border-honeycomb-ink/10 p-8">
+          <h2 class="font-display text-2xl">More stories on the way.</h2>
+          <p class="mt-3 text-honeycomb-ink/80">
+            We&rsquo;re publishing case studies as new campaigns close. Check back soon, or
+            <a href="/rss.xml">subscribe via RSS</a>.
+          </p>
+        </section>
+      ) : (
+        <ul class="mt-16 grid gap-10 sm:grid-cols-2">
+          {studies.map((entry) => (
+            <li>
+              <a href={`/${entry.slug}`} class="group block no-underline text-honeycomb-ink">
+                <div class="overflow-hidden border border-honeycomb-ink/10">
+                  <img
+                    src={entry.data.heroImage}
+                    alt={entry.data.heroImageAlt}
+                    width="1200"
+                    height="630"
+                    loading="lazy"
+                    decoding="async"
+                    class="block w-full h-auto aspect-[1200/630] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  />
+                </div>
+                <p class="mt-4 font-sans text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-purple">
+                  {entry.data.industry} · {entry.data.city}, {entry.data.state}
+                </p>
+                <h2 class="mt-2 font-display text-2xl leading-snug group-hover:underline">
+                  {entry.data.h1Heading}
+                </h2>
+                <p class="mt-2 text-honeycomb-ink/70">
+                  {entry.data.amountRaisedFormatted} from {entry.data.investorCount.toLocaleString()} investors · {entry.data.timeToFund}
+                </p>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </main>
+    <SiteFooter />
   </body>
 </html>
