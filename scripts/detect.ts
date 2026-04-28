@@ -134,7 +134,8 @@ async function main(): Promise<void> {
     summary.candidatesChecked++;
     let campaign;
     try {
-      campaign = await fetchCampaign(slug);
+      const fetched = await fetchCampaign(slug);
+      campaign = fetched.campaign;
     } catch (err) {
       // Defensive: a single 404/parse error doesn't fail the whole run.
       info('candidate fetch failed', { slug, error: (err as Error).message });
