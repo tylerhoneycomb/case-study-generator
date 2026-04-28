@@ -159,3 +159,84 @@ const SUCCESSFUL_STAGES = new Set([
 export function isCampaignSuccessful(stage: string): boolean {
   return SUCCESSFUL_STAGES.has(stage.trim().toLowerCase());
 }
+
+// ---------------------------------------------------------------------------
+// Hero image resolver — finds an image URL in a campaign payload.
+//
+// The platform's data shape varies by campaign vintage:
+//   - v3.3-spec canonical:   campaign.ogImageUrl
+//   - newer/variant:         campaign.campaignMedia[].url (or .src/.imageUrl)
+//   - some campaigns:        only the rendered <img> URL is reachable, which
+//                            usually traces back to a honeycomb-uploads URL
+//                            buried elsewhere in __NEXT_DATA__
+//
+// extractHeroImageUrl() walks all three in priority order. The recursive
+// deep-scan fallback is bounded to depth 5 and only matches URLs that look
+// like Honeycomb image storage to avoid false positives on social-link URLs.
+// ---------------------------------------------------------------------------
+const HONEYCOMB_IMAGE_HOST = 'storage.googleapis.com/honeycomb-uploads';
+const IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp|gif)(\?|$)/i;
+
+function looksLikeImageUrl(s: string): boolean {
+  if (!s.startsWith('http')) return false;
+  return IMAGE_EXT_RE.test(s) || s.includes(HONEYCOMB_IMAGE_HOST) || s.includes('campaignMedia');
+}
+
+function pickStringField(obj: Record<string, unknown>, keys: ReadonlyArray<string>): string | null {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === 'string' && looksLikeImageUrl(v)) return v;
+  }
+  return null;
+}
+
+// Depth bound for the recursive deep-scan. Honeycomb's __NEXT_DATA__
+// nests: campaign → campaignStories[] → paragraphs[] → media → {url|thumb},
+// which is depth 7 in the worst case. 8 gives a small safety margin.
+function findImageUrlDeep(value: unknown, depth = 0): string | null {
+  if (depth > 8) return null;
+  if (typeof value === 'string') {
+    return looksLikeImageUrl(value) ? value : null;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const hit = findImageUrlDeep(item, depth + 1);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (value && typeof value === 'object') {
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      const hit = findImageUrlDeep(v, depth + 1);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+export function extractHeroImageUrl(campaign: Campaign): string | null {
+  // 1. Canonical (v3.3 spec)
+  if (campaign.ogImageUrl && looksLikeImageUrl(campaign.ogImageUrl)) {
+    return campaign.ogImageUrl;
+  }
+
+  // 2. Top-level alternates that show up in some payloads
+  const top = campaign as unknown as Record<string, unknown>;
+  const direct = pickStringField(top, ['heroImageUrl', 'coverImageUrl', 'mainImageUrl', 'imageUrl', 'image']);
+  if (direct) return direct;
+
+  // 3. campaignMedia array — most common newer location
+  if (Array.isArray(campaign.campaignMedia)) {
+    for (const item of campaign.campaignMedia) {
+      if (typeof item === 'string' && looksLikeImageUrl(item)) return item;
+      if (item && typeof item === 'object') {
+        const hit = pickStringField(item as Record<string, unknown>, ['url', 'imageUrl', 'src', 'href', 'fileUrl']);
+        if (hit) return hit;
+      }
+    }
+  }
+
+  // 4. Deep scan — last resort. Only matches honeycomb-uploads or
+  //    image-extension URLs, so social-link strings won't false-positive.
+  return findImageUrlDeep(campaign);
+}
