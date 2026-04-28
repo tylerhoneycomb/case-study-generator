@@ -57,10 +57,13 @@ export const ClaudeOutputSchema = z.object({
   slug: z.string().regex(/^[a-z0-9-]+$/, 'slug must be lowercase kebab-case'),
   niche: z.string().min(2).max(80),
   industry: z.enum(INDUSTRIES),
-  // The prompt asks for systemSchemaJson as a stringified JSON-LD payload.
-  // We accept either a string (and parse it) or a pre-parsed object.
+  // The prompt asks for systemSchemaJson as a stringified JSON-LD payload
+  // (an array of two entities — Section 9). We accept a string (and parse
+  // it), an array of typed objects, or a single object — all valid JSON-LD
+  // shapes. Structural validation lives in claude.ts isValidJsonLd().
   systemSchemaJson: z.union([
     z.string(),
+    z.array(z.record(z.string(), z.unknown())),
     z.record(z.string(), z.unknown()),
   ]),
 });

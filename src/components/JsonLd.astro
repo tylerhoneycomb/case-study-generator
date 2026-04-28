@@ -8,7 +8,9 @@
 // classic JSON-LD breakout vector if any future input ever contains it.
 
 interface Props {
-  data: Record<string, unknown>;
+  // JSON-LD payload — may be an array of typed entities, a single typed
+  // object, or an @graph wrapper. Search engines accept all three.
+  data: unknown;
 }
 
 const { data } = Astro.props;

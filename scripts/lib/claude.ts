@@ -86,8 +86,10 @@ function getClient(): Anthropic {
 
 export interface GenerateResult {
   output: ClaudeOutput;
-  // The same JSON-LD blob, parsed. Convenience: callers usually want this.
-  systemSchemaJsonParsed: Record<string, unknown>;
+  // The same JSON-LD blob, parsed. May be an array of typed entities (the
+  // canonical prompt-§9 shape), a single typed object, or an @graph wrapper.
+  // Validated by isValidJsonLd() before this is set.
+  systemSchemaJsonParsed: unknown;
   usage: ClaudeUsage;
   // Raw model response for logging / debugging.
   raw: string;
@@ -136,12 +138,15 @@ export async function generateCaseStudy(payload: InputPayload): Promise<Generate
     );
   }
 
-  // Resolve systemSchemaJson to a parsed object regardless of whether the
-  // model returned a string or an object.
-  let systemSchemaJsonParsed: Record<string, unknown>;
+  // Resolve systemSchemaJson to a parsed value regardless of whether the
+  // model returned a string, object, or array. The runtime prompt §9 calls
+  // for an array of two JSON-LD entities (one LocalBusiness/subtype, one
+  // Article); we also accept a single object or a {@graph: [...]} wrapper
+  // for resilience to prompt evolution and editor convenience.
+  let systemSchemaJsonParsed: unknown;
   if (typeof validated.data.systemSchemaJson === 'string') {
     try {
-      systemSchemaJsonParsed = JSON.parse(validated.data.systemSchemaJson) as Record<string, unknown>;
+      systemSchemaJsonParsed = JSON.parse(validated.data.systemSchemaJson) as unknown;
     } catch (err) {
       throw new ClaudeError(
         'SYSTEM_SCHEMA_PARSE_FAILED',
@@ -152,10 +157,10 @@ export async function generateCaseStudy(payload: InputPayload): Promise<Generate
     systemSchemaJsonParsed = validated.data.systemSchemaJson;
   }
 
-  if (!('@context' in systemSchemaJsonParsed) || !('@graph' in systemSchemaJsonParsed)) {
+  if (!isValidJsonLd(systemSchemaJsonParsed)) {
     throw new ClaudeError(
       'SYSTEM_SCHEMA_SHAPE',
-      'systemSchemaJson missing @context or @graph.',
+      'systemSchemaJson must be a JSON-LD array of typed objects, a single typed object, or an object with @graph.',
     );
   }
 
@@ -223,4 +228,29 @@ export class ClaudeError extends Error {
   constructor(public override readonly name: string, message: string) {
     super(message);
   }
+}
+
+// Accept any of the three valid JSON-LD shapes per the runtime prompt §9
+// and adjacent JSON-LD spec patterns:
+//   1. Array of typed objects:   [{"@context":...,"@type":...}, ...]   ← prompt-canonical
+//   2. Object with @graph:       {"@context":..., "@graph":[...]}       ← legacy placeholder shape
+//   3. Single typed object:      {"@context":..., "@type":...}          ← spec-allowed
+function isValidJsonLd(data: unknown): boolean {
+  if (Array.isArray(data)) {
+    if (data.length === 0) return false;
+    return data.every(isJsonLdEntity);
+  }
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    if (typeof obj['@context'] !== 'string' && typeof obj['@context'] !== 'object') return false;
+    if (Array.isArray(obj['@graph'])) return true;
+    return typeof obj['@type'] === 'string';
+  }
+  return false;
+}
+
+function isJsonLdEntity(item: unknown): boolean {
+  if (!item || typeof item !== 'object') return false;
+  const obj = item as Record<string, unknown>;
+  return typeof obj['@type'] === 'string';
 }
