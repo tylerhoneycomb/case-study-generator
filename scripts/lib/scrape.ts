@@ -98,19 +98,40 @@ export async function listListing(): Promise<ListingEntry[]> {
 
 // ---------------------------------------------------------------------------
 // Detail page — full campaign payload by slug.
+//
+// Returns BOTH the validated Campaign (from campaignData.data) AND the wider
+// initialCampaignData blob. Some platform variants put the hero image URL
+// in siblings of campaignData (e.g. initialCampaignData.campaignMedia or
+// initialCampaignData.media), which the campaign-level deep-scan can't see
+// because it only walks campaignData.data. extractHeroImageUrl() falls back
+// to the wider blob when the campaign-level search comes up empty.
 // ---------------------------------------------------------------------------
-export async function fetchCampaign(slug: string): Promise<Campaign> {
+export interface FetchedCampaign {
+  campaign: Campaign;
+  // initialCampaignData object — the parent of campaignData. Carries any
+  // sibling fields (campaignMedia, media, images, etc.) that aren't part of
+  // the validated Campaign schema. Used only by the image resolver.
+  initialCampaignData: unknown;
+}
+
+export async function fetchCampaign(slug: string): Promise<FetchedCampaign> {
   if (!slug) throw new ScrapeError('BAD_SLUG', 'fetchCampaign requires a non-empty slug.');
   const html = await fetchHtml(`${BASE_URL}/campaigns/${encodeURIComponent(slug)}`);
   const data = extractNextData(html);
 
-  const raw = get<unknown>(data, [
+  const initialCampaignData = get<unknown>(data, [
     'props',
     'pageProps',
     'initialCampaignData',
-    'campaignData',
-    'data',
   ]);
+  if (!initialCampaignData || typeof initialCampaignData !== 'object') {
+    throw new ScrapeError(
+      'DETAIL_SHAPE_DRIFT',
+      `Detail payload missing at props.pageProps.initialCampaignData for slug "${slug}".`,
+    );
+  }
+
+  const raw = get<unknown>(initialCampaignData, ['campaignData', 'data']);
   if (!raw || typeof raw !== 'object') {
     throw new ScrapeError(
       'DETAIL_SHAPE_DRIFT',
@@ -125,7 +146,7 @@ export async function fetchCampaign(slug: string): Promise<Campaign> {
       `Detail payload failed schema validation for slug "${slug}": ${parsed.error.message}`,
     );
   }
-  return parsed.data;
+  return { campaign: parsed.data, initialCampaignData };
 }
 
 // ---------------------------------------------------------------------------
@@ -214,7 +235,7 @@ function findImageUrlDeep(value: unknown, depth = 0): string | null {
   return null;
 }
 
-export function extractHeroImageUrl(campaign: Campaign): string | null {
+export function extractHeroImageUrl(campaign: Campaign, wider?: unknown): string | null {
   // 1. Canonical (v3.3 spec)
   if (campaign.ogImageUrl && looksLikeImageUrl(campaign.ogImageUrl)) {
     return campaign.ogImageUrl;
@@ -236,7 +257,18 @@ export function extractHeroImageUrl(campaign: Campaign): string | null {
     }
   }
 
-  // 4. Deep scan — last resort. Only matches honeycomb-uploads or
-  //    image-extension URLs, so social-link strings won't false-positive.
-  return findImageUrlDeep(campaign);
+  // 4. Deep scan within campaignData.data.
+  const local = findImageUrlDeep(campaign);
+  if (local) return local;
+
+  // 5. Deep scan the wider initialCampaignData blob — siblings to
+  //    campaignData (campaignMedia, media, images, etc.) live here for some
+  //    platform variants. This is the catch-all that handles every campaign
+  //    we've observed where the URL isn't in campaignData.data at all.
+  if (wider !== undefined) {
+    const widerHit = findImageUrlDeep(wider);
+    if (widerHit) return widerHit;
+  }
+
+  return null;
 }

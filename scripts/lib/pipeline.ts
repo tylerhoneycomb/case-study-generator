@@ -57,8 +57,11 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   // ---- 1. Fetch detail ----
   await stage(`📥 Fetching campaign detail for \`${slug}\``);
   let campaign: Campaign;
+  let initialCampaignData: unknown;
   try {
-    campaign = await fetchCampaign(slug);
+    const fetched = await fetchCampaign(slug);
+    campaign = fetched.campaign;
+    initialCampaignData = fetched.initialCampaignData;
   } catch (err) {
     throw new PipelineError('scrape', (err as Error).message);
   }
@@ -141,13 +144,14 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
 
   // ---- 4. Fetch + store hero image ----
   // extractHeroImageUrl walks ogImageUrl → top-level alternates → campaignMedia
-  // → bounded deep scan. Returns null only if no honeycomb-uploads-shaped URL
-  // exists anywhere in the payload (campaign genuinely has no hero photo).
-  const heroUrl = extractHeroImageUrl(campaign);
+  // → bounded deep scan of campaignData.data → bounded deep scan of the wider
+  // initialCampaignData blob. The last step is what catches campaigns where
+  // the image lives in a sibling (e.g. initialCampaignData.media).
+  const heroUrl = extractHeroImageUrl(campaign, initialCampaignData);
   if (!heroUrl) {
     throw new PipelineError(
       'image',
-      `Campaign "${slug}" has no findable hero image (checked ogImageUrl, top-level alternates, campaignMedia, deep scan).`,
+      `Campaign "${slug}" has no findable hero image (checked ogImageUrl, top-level alternates, campaignMedia, campaignData deep scan, initialCampaignData deep scan).`,
     );
   }
   await stage('🖼️ Fetching hero image', { source: heroUrl });
