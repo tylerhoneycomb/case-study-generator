@@ -1,0 +1,44 @@
+---
+interface Props {
+  h1Heading: string;
+  heroSubhead: string;
+  heroImage: string;
+  heroImageAlt: string;
+  // Caption-strip data — pulled out so the strip stays consistent across pages
+  // without the agent having to write the copy.
+  businessName: string;
+  amountRaisedFormatted: string;
+  investorCount: number;
+  city: string;
+  state: string;
+}
+
+const { h1Heading, heroSubhead, heroImage, heroImageAlt, businessName, amountRaisedFormatted, investorCount, city, state } = Astro.props;
+---
+<section class="mx-auto max-w-5xl px-6 pt-12 pb-6">
+  <p class="font-sans text-sm font-semibold uppercase tracking-[0.2em] text-honeycomb-purple">
+    Funded by their community · {city}, {state}
+  </p>
+  <h1 class="mt-3 font-display text-4xl leading-[1.1] sm:text-5xl md:text-6xl max-w-4xl">
+    {h1Heading}
+  </h1>
+  <p class="mt-5 max-w-3xl text-xl leading-snug text-honeycomb-ink/80">
+    {heroSubhead}
+  </p>
+</section>
+<figure class="mx-auto max-w-5xl px-6">
+  <div class="relative">
+    <img
+      src={heroImage}
+      alt={heroImageAlt}
+      width="1200"
+      height="630"
+      loading="eager"
+      decoding="async"
+      class="block w-full h-auto aspect-[1200/630] object-cover rounded-sm border border-honeycomb-ink/10"
+    />
+    <figcaption class="caption-strip mt-[-1px]">
+      {businessName} raised {amountRaisedFormatted} from {investorCount.toLocaleString()} {investorCount === 1 ? 'investor' : 'investors'}.
+    </figcaption>
+  </div>
+</figure>

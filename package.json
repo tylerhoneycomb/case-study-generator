@@ -1,27 +1,42 @@
 {
-  "name": "honeycomb-collateral-agent",
-  "version": "1.0.0",
+  "name": "funded-honeycombcredit",
+  "type": "module",
+  "version": "4.0.0",
   "private": true,
-  "description": "Daily cron agent that detects newly Funded Honeycomb Credit campaigns, generates SEO-optimized case studies via Claude, and publishes them to the Honeycomb Credit website via the Wix CMS.",
-  "main": "dist/index.js",
+  "description": "Collateral Development Agent v4.0 — funded.honeycombcredit.com",
   "scripts": {
-    "build": "tsc",
-    "check-campaigns": "tsc && node dist/index.js",
-    "rebuild": "tsc && node dist/rebuild.js",
-    "backfill": "tsc && node dist/backfill.js",
-    "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit"
-  },
-  "engines": {
-    "node": ">=20"
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "typecheck": "tsc --noEmit",
+    "detect": "tsx scripts/detect.ts",
+    "generate": "tsx scripts/generate.ts",
+    "redraft": "tsx scripts/redraft.ts",
+    "delete": "tsx scripts/delete.ts",
+    "backfill": "tsx scripts/backfill.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.1",
-    "nodemailer": "^6.9.16"
+    "@astrojs/mdx": "^4.0.3",
+    "@astrojs/rss": "^4.0.11",
+    "@astrojs/sitemap": "^3.2.1",
+    "@astrojs/tailwind": "^5.1.4",
+    "@fontsource/open-sans": "^5.1.0",
+    "@fontsource/raleway": "^5.1.0",
+    "astro": "^5.1.5",
+    "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
-    "@types/node": "^20.14.0",
-    "@types/nodemailer": "^6.4.16",
-    "typescript": "^5.5.4"
+    "@anthropic-ai/sdk": "^0.65.0",
+    "@octokit/rest": "^21.0.2",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

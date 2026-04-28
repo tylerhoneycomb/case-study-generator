@@ -1,0 +1,76 @@
+/* Self-hosted brand fonts (per brand guide page 9). */
+@import '@fontsource/raleway/400.css';
+@import '@fontsource/raleway/600.css';
+@import '@fontsource/raleway/700.css';
+@import '@fontsource/open-sans/400.css';
+@import '@fontsource/open-sans/600.css';
+@import '@fontsource/open-sans/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color: theme('colors.honeycomb.ink');
+    background: theme('colors.honeycomb.cream');
+    font-family: theme('fontFamily.sans');
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background: theme('backgroundImage.honeycomb-fade');
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: theme('fontFamily.display');
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: theme('colors.honeycomb.ink');
+  }
+
+  a {
+    color: theme('colors.honeycomb.purple');
+    text-underline-offset: 0.15em;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+@layer components {
+  /* Yellow caption strip — recurring pattern from the brand guide.
+     Used under hero photography to surface the funded amount + investor count. */
+  .caption-strip {
+    @apply inline-block bg-honeycomb-yellow text-honeycomb-ink px-4 py-3 font-sans font-semibold;
+  }
+
+  /* Article prose styling for the rich-text story body. The Claude prompt
+     emits a constrained tag set (p, h2, h3, ul/ol, li, strong, em, a, blockquote);
+     these rules shape that output without depending on @tailwindcss/typography. */
+  .article-prose {
+    @apply max-w-prose text-honeycomb-ink/90;
+  }
+  .article-prose p {
+    @apply text-lg leading-relaxed mt-5;
+  }
+  .article-prose h2 {
+    @apply font-display text-2xl mt-12 mb-3;
+  }
+  .article-prose h3 {
+    @apply font-display text-xl mt-8 mb-2;
+  }
+  .article-prose ul, .article-prose ol {
+    @apply mt-4 pl-6 space-y-2 text-lg leading-relaxed;
+  }
+  .article-prose ul { @apply list-disc; }
+  .article-prose ol { @apply list-decimal; }
+  .article-prose blockquote {
+    @apply mt-6 pl-5 border-l-4 border-honeycomb-purple italic text-honeycomb-ink/80;
+  }
+  .article-prose a {
+    @apply underline;
+  }
+}

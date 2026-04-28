@@ -1,0 +1,21 @@
+---
+interface Props {
+  quote: string;
+  attribution?: string;
+}
+
+const { quote, attribution } = Astro.props;
+---
+<aside class="mx-auto max-w-5xl px-6 mt-12">
+  <figure class="relative max-w-3xl rounded-md bg-honeycomb-blue px-8 py-10">
+    <span aria-hidden="true" class="absolute -top-4 left-6 font-display text-6xl leading-none text-honeycomb-purple">&ldquo;</span>
+    <blockquote class="font-display text-2xl leading-snug text-honeycomb-ink">
+      {quote}
+    </blockquote>
+    {attribution && (
+      <figcaption class="mt-4 font-sans text-sm font-semibold uppercase tracking-wider text-honeycomb-purple">
+        — {attribution}
+      </figcaption>
+    )}
+  </figure>
+</aside>

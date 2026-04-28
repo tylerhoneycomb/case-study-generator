@@ -1,97 +1,79 @@
-# Honeycomb Collateral Development Agent
+# funded.honeycombcredit.com
 
-Daily cron agent that detects newly-Funded Honeycomb Credit campaigns, generates SEO-optimized case studies via the Claude API, and publishes drafts to the Honeycomb Credit website via the Wix `CaseStudies` CMS collection.
+Collateral Development Agent v4.0. A static Astro + MDX site listing every
+funded Honeycomb Credit campaign. The repo is the agent: GitHub Actions
+detects newly funded campaigns daily, generates one MDX file per campaign via
+the Claude API, runs a humanization validator, fetches the hero image, commits
+the result, and GitHub Pages deploys.
 
-Target output location: `honeycombcredit.com/case-studies/{slug}`.
+See `collateral_agent_v4_scope.md` (in the design archive) for the full
+architecture.
 
-Authoritative spec: `docs/collateral_agent_spec_v3_3.md`.
+## Stack
 
-## What this repo does
+- **Astro 5** with TypeScript (strict), Tailwind, MDX content collections
+- **GitHub Pages** from a private repo (GitHub Pro)
+- **GitHub Actions** for daily detection cron, on-demand operations, and
+  Pages deploy
+- **GitHub Issues + Issue Forms + comment slash commands** as the human
+  control surface
+- **Anthropic API** for case-study generation
 
-1. Scrapes `invest.honeycombcredit.com` daily, records every Fundraising slug in `data/tracked_campaigns.json`.
-2. Re-checks every tracked slug that has not yet been processed. Campaigns now reading `Funded` are new case-study candidates.
-3. For each new Funded campaign: calls Claude with `prompts/case-study-prompt.md`, uploads the hero image to Wix Media, POSTs a draft CMS item to Wix Data. The Wix `beforeInsert` hook then runs the humanization validator.
-4. Emails a per-campaign notification to `NOTIFY_RECIPIENT` with the humanization verdict and a deep link to the Wix CMS entry.
-5. Emails an end-of-run summary **every run, including zero-campaign days.** Silent failure is not a failure mode.
-6. Commits the updated state files via `stefanzweifel/git-auto-commit-action@v5`.
-
-## Required secrets
-
-Set these in GitHub repo secrets (Settings → Secrets and variables → Actions):
-
-| Name | Source |
-|---|---|
-| `ANTHROPIC_API_KEY` | https://console.anthropic.com/settings/keys |
-| `WIX_API_KEY` | Wix dashboard → site settings → API keys (Phase 6 setup) |
-| `WIX_SITE_ID` | `manage.wix.com/account/sites` URL when viewing the site dashboard |
-| `SMTP_USER` | Outbound mailbox; defaults to `tyler@honeycombcredit.com` |
-| `SMTP_PASS` | Google app password for `SMTP_USER` |
-| `SMTP_HOST` | `smtp.gmail.com` |
-| `SMTP_PORT` | `587` |
-| `NOTIFY_RECIPIENT` | `tyler@honeycombcredit.com` |
-
-See `.env.example` for the full list. For local runs, copy to `.env` (git-ignored) and load with a tool of your choice (e.g. `node --env-file=.env dist/index.js`).
-
-## Running locally
+## Local development
 
 ```bash
-npm ci
-npm run typecheck
-npm run check-campaigns        # runs tsc then executes dist/index.js
+nvm use            # Node 20+
+npm install
+npm run dev        # http://localhost:4321
+npm run build      # static output to dist/
+npm run typecheck  # tsc --noEmit
 ```
 
-## Running on GitHub Actions
-
-### Daily cron
-Scheduled daily at 10 AM ET (`cron: '0 14 * * *'`). Manual trigger: Actions tab → "Daily Campaign Check" → Run workflow.
-
-### Backfill historical Funded campaigns
-Actions tab → "Backfill Case Studies" → Run workflow. Inputs (provide at least one):
-- `slugs` — comma-separated Honeycomb slugs (verbatim, e.g. `Savory-Crust,Brothmonger-Brooklyn-Bone-Broth`).
-- `business_names` — comma-separated queries; case-insensitive substring match against the seeded slug list.
-- `from_date` / `to_date` — `YYYY-MM-DD` close-date range; filters by `campaignExpirationDate`. Wide ranges scrape every seed slug to read the date, which is slow (5–10 min for the full 371-slug seed).
-
-Skips any candidate that already has a CMS entry (use Rebuild for those).
-
-### Rebuild an existing case study
-Actions tab → "Rebuild Case Study" → Run workflow. Input:
-- `slugs` — comma-separated **case-study slugs** (the Wix slug, lowercase-hyphenated; e.g. `brothmonger-brooklyn-bone-broth`), not the Honeycomb slug.
-
-Patches the existing CMS row in place (URL preserved), overwrites the hero image, resets `status` to `draft` so it goes back through review.
-
-## Pre-flight before enabling cron
-
-Follow the three pre-flight prompts in `docs/handoff.md`:
-
-1. **Secrets**: verify all seven credentials exist and work.
-2. **Seed state files**: the spec's pilot-seed strategy requires seeding `data/processed_campaigns.json` with every currently-Funded slug before the first run. Without this seed, day one will attempt to publish every Funded campaign the listing ever surfaces.
-3. **Smoke test**: exercise Claude → Wix Media → Wix Data → dynamic-page gate end to end. Evidence goes in `~/honeycomb-agent-secrets/smoke-test-evidence/`.
-
-## Where to look when it breaks
-
-- **End-of-run summary email** is the health signal. If it stops arriving, the pipeline is broken.
-- **GitHub Actions run logs** — Actions tab.
-- **Wix CMS entries** — `CaseStudies` collection. Items with `humanizationChecked = false` render as 404; the reviewer edits the story to clear flags.
-- **Scraper anomalies** — schema changes on Honeycomb's side surface in the summary email. Sample payloads for regression comparison live in `docs/sample_payloads/`.
-
-## Source layout
+## Repo layout
 
 ```
-src/index.ts        Orchestrator
-src/scraper.ts      __NEXT_DATA__ fetch and parse
-src/tracker.ts      tracked / processed state files
-src/generator.ts    Claude API content generation
-src/wix.ts          Wix Media + Wix Data
-src/notifier.ts     per-campaign + summary email
-src/types.ts        shared types
-
-data/tracked_campaigns.json     every Fundraising slug seen
-data/processed_campaigns.json   slugs already turned into drafts
-
-prompts/case-study-prompt.md    runtime prompt sent to Claude
-docs/                           spec, handoff, sample payloads
+src/
+  content/case-studies/   ← one .mdx per funded campaign (agent writes)
+  content/config.ts       ← Zod schema; single source of truth
+  pages/                  ← Astro routing
+  layouts/                ← case study + index layouts
+  components/             ← hero, metadata, CTA, JSON-LD emitter
+public/
+  og/                     ← hero / OG images, one per case study
+  CNAME                   ← funded.honeycombcredit.com
+scripts/
+  detect.ts generate.ts redraft.ts delete.ts backfill.ts
+  lib/scrape.ts claude.ts humanize.ts ratelimit.ts github.ts
+.github/
+  workflows/              ← deploy / detect (cron) / on-issue / on-comment
+  ISSUE_TEMPLATE/         ← backfill, redraft-with-feedback
+.state/
+  observed-fundraising.json   ← detection state
+  ratelimit.json              ← daily generation counter
+prompts/
+  case-study-prompt.md    ← carries forward from v3.3
 ```
 
-## Costs
+## Operations
 
-Per spec § 12: under $1/month at steady state (~10 case studies/month). Claude API ~$0.05–$0.10 per case study; everything else free-tier.
+Once live, operate the agent via GitHub:
+
+- **`/funded generate <slug>`** in any issue/PR comment — generate one case study
+- **`/funded redraft <slug>`** — regenerate without feedback
+- **`/funded delete <slug>`** — remove a published case study
+- **`/funded status`** — queue depth, rate-limit usage, last cron
+- **`/funded cost-estimate <slug…>`** — estimate $ before generating
+- **New issue → Backfill** — multi-slug Issue Form with rate override and dry-run
+- **New issue → Redraft with feedback** — slug + feedback textarea
+
+## Build phases
+
+This repo is being built in seven phases. See git log for phase commits.
+
+1. Repo scaffolding and Astro skeleton (this commit)
+2. Content schema + rendering
+3. Core scripts (scrape, claude, humanize, ratelimit, github, CLIs)
+4. GitHub Actions workflows + Issue Forms
+5. Custom-domain finalization
+6. Seed case study
+7. Cutover (cron live, placeholder removed)

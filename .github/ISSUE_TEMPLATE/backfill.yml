@@ -1,0 +1,40 @@
+name: "Backfill case studies"
+description: "Process a list of historical funded campaign slugs."
+title: "[Backfill] "
+labels: ["form: backfill"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Submit one or more historical funded campaign slugs to publish as
+        case studies. Slugs come from `invest.honeycombcredit.com/campaigns/{slug}`.
+  - type: textarea
+    id: slugs
+    attributes:
+      label: Slugs
+      description: One slug per line. Lines starting with `#` are ignored.
+      placeholder: |
+        brothmonger
+        nomad-donuts
+        green-thumb-nursery
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: force
+    attributes:
+      label: Force regenerate
+      options:
+        - label: Overwrite an existing case study if one exists
+  - type: checkboxes
+    id: dry-run
+    attributes:
+      label: Dry run
+      options:
+        - label: Skip generation; report estimated cost only
+  - type: input
+    id: rate
+    attributes:
+      label: "Rate override (per day, 1-10)"
+      description: "Default is 3. Override applies only to this backfill operation."
+      placeholder: "3"

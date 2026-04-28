@@ -1,0 +1,42 @@
+---
+interface Props {
+  ctaText: string;
+  ctaUrl: string;
+  campaignUrl: string;
+}
+
+const { ctaText, ctaUrl, campaignUrl } = Astro.props;
+---
+<section class="mx-auto max-w-5xl px-6 mt-16">
+  <div class="grid gap-0 border border-honeycomb-ink/80 sm:grid-cols-[2fr_3fr]">
+    <div class="bg-honeycomb-yellow px-8 py-10 sm:py-14">
+      <p class="font-sans text-xs font-bold uppercase tracking-[0.2em] text-honeycomb-ink/70">
+        Your turn
+      </p>
+      <h2 class="mt-2 font-display text-3xl leading-tight">
+        Could your business raise like this?
+      </h2>
+    </div>
+    <div class="bg-honeycomb-cream px-8 py-10 sm:py-14">
+      <p class="text-lg leading-relaxed text-honeycomb-ink/80">
+        Honeycomb Credit helps small businesses raise capital from the people
+        who already love them. If that sounds like a fit, we&rsquo;ll walk you
+        through whether your business qualifies.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a
+          href={ctaUrl}
+          class="inline-flex items-center bg-honeycomb-purple px-6 py-3 font-sans text-sm font-bold uppercase tracking-wider text-white no-underline hover:bg-honeycomb-ink"
+        >
+          {ctaText}
+        </a>
+        <a
+          href={campaignUrl}
+          class="inline-flex items-center px-6 py-3 font-sans text-sm font-bold uppercase tracking-wider text-honeycomb-ink no-underline border border-honeycomb-ink hover:bg-honeycomb-ink hover:text-honeycomb-cream"
+        >
+          See the original campaign
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
