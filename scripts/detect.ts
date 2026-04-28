@@ -30,7 +30,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from './lib/args.js';
 import { info, error as logError, stage, setTrackingIssue } from './lib/log.js';
-import { listListing, fetchCampaign, isFunded } from './lib/scrape.js';
+import { listListing, fetchCampaign, isCampaignSuccessful } from './lib/scrape.js';
 import { runPipeline, PipelineError } from './lib/pipeline.js';
 import { canConsume, consume, status as rateStatus, RateLimitExceeded } from './lib/ratelimit.js';
 import { createIssue, addLabel, addComment, closeIssue } from './lib/github.js';
@@ -141,9 +141,9 @@ async function main(): Promise<void> {
       continue;
     }
 
-    if (!isFunded(campaign.campaignStage)) {
-      // Not funded yet (or now in a different terminal stage); update state
-      // so we don't recheck on every run.
+    if (!isCampaignSuccessful(campaign.campaignStage)) {
+      // Not a success state (still fundraising, or terminal-but-failed like
+      // "Closed"); update state so we don't recheck on every run.
       const ent = observed[slug];
       if (ent) ent.lastKnownStage = campaign.campaignStage;
       continue;

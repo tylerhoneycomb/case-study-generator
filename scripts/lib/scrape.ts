@@ -142,3 +142,20 @@ export function isFunded(stage: string): boolean {
 export function isFundraising(stage: string): boolean {
   return stage.trim().toLowerCase() === 'fundraising';
 }
+
+// Stages where the campaign has hit its goal and the story is complete.
+// "Funded" is the canonical final state; "Successful - Finalizing" is the
+// post-close paperwork window before a campaign formally flips to Funded.
+// Both should trigger case-study generation — the narrative doesn't change
+// while disbursement docs are in flight, and waiting just delays the page.
+//
+// Add new states here as they're observed in the wild. The case-insensitive
+// match defends against minor casing drift in the upstream platform.
+const SUCCESSFUL_STAGES = new Set([
+  'funded',
+  'successful - finalizing',
+]);
+
+export function isCampaignSuccessful(stage: string): boolean {
+  return SUCCESSFUL_STAGES.has(stage.trim().toLowerCase());
+}
