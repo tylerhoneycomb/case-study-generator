@@ -12,7 +12,7 @@
 //   6. git add + commit
 // =============================================================================
 
-import { fetchCampaign, campaignUrl as buildCampaignUrl, isFunded } from './scrape.js';
+import { fetchCampaign, campaignUrl as buildCampaignUrl, isCampaignSuccessful } from './scrape.js';
 import { generateCaseStudy, type InputPayload } from './claude.js';
 import { validateCopy, stripHtml, formatIssuesForReviewer } from './humanize.js';
 import { fetchAndStoreHeroImage } from './image.js';
@@ -63,10 +63,10 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     throw new PipelineError('scrape', (err as Error).message);
   }
 
-  if (!opts.skipFundedCheck && !isFunded(campaign.campaignStage)) {
+  if (!opts.skipFundedCheck && !isCampaignSuccessful(campaign.campaignStage)) {
     throw new PipelineError(
       'precheck',
-      `Campaign "${slug}" is in stage "${campaign.campaignStage}", not Funded. Use --force-stage to override (backfill only).`,
+      `Campaign "${slug}" is in stage "${campaign.campaignStage}". Generation requires a successful stage (Funded or Successful - Finalizing). Backfill skips this check.`,
     );
   }
 
