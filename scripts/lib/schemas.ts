@@ -124,8 +124,12 @@ export const CampaignSchema = z
       .passthrough()
       .optional(),
 
-    // Hero/OG image source
+    // Hero/OG image source. v3.3 spec calls ogImageUrl canonical, but newer
+    // platform variants put the image in campaignMedia[]. extractHeroImageUrl()
+    // (scrape.ts) walks both, plus a deep-scan fallback for any
+    // honeycomb-uploads URL.
     ogImageUrl: z.string().optional(),
+    campaignMedia: z.array(z.unknown()).optional(),
   })
   .passthrough();
 

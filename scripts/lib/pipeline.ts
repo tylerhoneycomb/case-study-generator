@@ -12,7 +12,7 @@
 //   6. git add + commit
 // =============================================================================
 
-import { fetchCampaign, campaignUrl as buildCampaignUrl, isCampaignSuccessful } from './scrape.js';
+import { fetchCampaign, campaignUrl as buildCampaignUrl, isCampaignSuccessful, extractHeroImageUrl } from './scrape.js';
 import { generateCaseStudy, type InputPayload } from './claude.js';
 import { validateCopy, stripHtml, formatIssuesForReviewer } from './humanize.js';
 import { fetchAndStoreHeroImage } from './image.js';
@@ -105,6 +105,9 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     ...(issuer.website !== undefined ? { issuerWebsite: issuer.website } : {}),
     ...(issuer.description !== undefined ? { issuerDescription: issuer.description } : {}),
     ...(campaign.ogImageUrl !== undefined ? { ogImageUrl: campaign.ogImageUrl } : {}),
+    // (Note: extractHeroImageUrl is the source of truth for the hero image
+    // path used to fetch and store the asset; the input payload above is
+    // just the model's signal, not the fetch source.)
     ...(opts.feedback !== undefined ? { redraftFeedback: opts.feedback } : {}),
   };
 
@@ -137,12 +140,19 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   }
 
   // ---- 4. Fetch + store hero image ----
-  if (!campaign.ogImageUrl) {
-    throw new PipelineError('image', `Campaign "${slug}" has no ogImageUrl.`);
+  // extractHeroImageUrl walks ogImageUrl → top-level alternates → campaignMedia
+  // → bounded deep scan. Returns null only if no honeycomb-uploads-shaped URL
+  // exists anywhere in the payload (campaign genuinely has no hero photo).
+  const heroUrl = extractHeroImageUrl(campaign);
+  if (!heroUrl) {
+    throw new PipelineError(
+      'image',
+      `Campaign "${slug}" has no findable hero image (checked ogImageUrl, top-level alternates, campaignMedia, deep scan).`,
+    );
   }
-  await stage('🖼️ Fetching hero image');
+  await stage('🖼️ Fetching hero image', { source: heroUrl });
   const img = await fetchAndStoreHeroImage({
-    ogImageUrl: campaign.ogImageUrl,
+    ogImageUrl: heroUrl,
     slug: claude.output.slug,
   });
 

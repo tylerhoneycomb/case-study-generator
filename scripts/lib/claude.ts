@@ -188,10 +188,12 @@ export async function generateCaseStudy(payload: InputPayload): Promise<Generate
 }
 
 // Estimate cost without calling the API. Used by /funded cost-estimate.
-// Approximation: prompt + payload tokens ≈ 8000 input, completion ≈ 2000 output.
-// Recalibrate if real generations diverge.
+// Calibrated against the first real generation (The-Saucy-African,
+// 16923 input + 2813 output = $0.465 on Opus 4.7). The runtime prompt
+// itself is ~14k tokens; campaign payloads add 2-4k; output is consistently
+// ~2.5-3k. Recalibrate if median real generations diverge.
 export function estimateCostForGeneration(model: string = DEFAULT_MODEL): number {
-  return estimateCost(model, 8000, 2000);
+  return estimateCost(model, 17000, 2800);
 }
 
 function formatUserMessage(p: InputPayload): string {
