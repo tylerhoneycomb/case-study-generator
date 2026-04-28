@@ -10,7 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "astro sync && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "detect": "tsx scripts/detect.ts",
