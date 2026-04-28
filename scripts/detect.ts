@@ -94,12 +94,18 @@ async function main(): Promise<void> {
     listing = await listListing();
   } catch (err) {
     logError('listing scrape failed', { message: (err as Error).message });
-    // Open a meta error issue so silent failures stay loud.
-    await createIssue({
-      title: `🐝 Detection failed — ${new Date().toISOString().slice(0, 10)}`,
-      body: `Listing scrape on invest.honeycombcredit.com failed:\n\n\`\`\`\n${(err as Error).message}\n\`\`\``,
-      labels: ['error', 'detection'],
-    });
+    // Open a meta error issue so silent failures stay loud. If GitHub itself
+    // is unreachable (or env vars are missing locally), don't let the
+    // diagnostic call mask the original error.
+    try {
+      await createIssue({
+        title: `🐝 Detection failed — ${new Date().toISOString().slice(0, 10)}`,
+        body: `Listing scrape on invest.honeycombcredit.com failed:\n\n\`\`\`\n${(err as Error).message}\n\`\`\``,
+        labels: ['error', 'detection'],
+      });
+    } catch (postErr) {
+      logError('also failed to open tracking issue', { message: (postErr as Error).message });
+    }
     process.exit(1);
   }
   summary.scanned = listing.length;
@@ -229,11 +235,15 @@ async function main(): Promise<void> {
 
   info('detect summary', { ...summary });
   if (!dryRun && (summary.newlyFunded.length > 0 || summary.failed.length > 0)) {
-    await createIssue({
-      title: `[meta] Daily detection log — ${today}`,
-      body: summaryBody,
-      labels: ['detection', 'meta'],
-    });
+    try {
+      await createIssue({
+        title: `[meta] Daily detection log — ${today}`,
+        body: summaryBody,
+        labels: ['detection', 'meta'],
+      });
+    } catch (postErr) {
+      logError('failed to open daily summary issue', { message: (postErr as Error).message });
+    }
   }
 }
 

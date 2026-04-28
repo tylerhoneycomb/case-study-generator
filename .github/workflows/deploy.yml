@@ -28,6 +28,10 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test
       - name: Build
         run: npm run build
       - uses: actions/upload-pages-artifact@v3
