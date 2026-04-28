@@ -57,11 +57,13 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   // ---- 1. Fetch detail ----
   await stage(`📥 Fetching campaign detail for \`${slug}\``);
   let campaign: Campaign;
-  let initialCampaignData: unknown;
+  let pageProps: unknown;
+  let pageHtml: string;
   try {
     const fetched = await fetchCampaign(slug);
     campaign = fetched.campaign;
-    initialCampaignData = fetched.initialCampaignData;
+    pageProps = fetched.pageProps;
+    pageHtml = fetched.html;
   } catch (err) {
     throw new PipelineError('scrape', (err as Error).message);
   }
@@ -143,15 +145,18 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   }
 
   // ---- 4. Fetch + store hero image ----
-  // extractHeroImageUrl walks ogImageUrl → top-level alternates → campaignMedia
-  // → bounded deep scan of campaignData.data → bounded deep scan of the wider
-  // initialCampaignData blob. The last step is what catches campaigns where
-  // the image lives in a sibling (e.g. initialCampaignData.media).
-  const heroUrl = extractHeroImageUrl(campaign, initialCampaignData);
+  // extractHeroImageUrl priority chain (most stable → least stable):
+  //   1. pageProps.ogImageUrl  ← canonical Honeycomb OG field (primary fix)
+  //   2. campaign.ogImageUrl   ← v3.3 spec inner field
+  //   3. top-level alternates  ← heroImageUrl, coverImageUrl, etc.
+  //   4. campaignMedia[]       ← common newer-campaign location
+  //   5. deep-scan(pageProps)  ← catch-all for unknown sibling shapes
+  //   6. HTML <img> regex      ← defense-in-depth, last resort
+  const heroUrl = extractHeroImageUrl(campaign, pageProps, pageHtml);
   if (!heroUrl) {
     throw new PipelineError(
       'image',
-      `Campaign "${slug}" has no findable hero image (checked ogImageUrl, top-level alternates, campaignMedia, campaignData deep scan, initialCampaignData deep scan).`,
+      `Campaign "${slug}" has no findable hero image (checked pageProps.ogImageUrl, campaign.ogImageUrl, top-level alternates, campaignMedia, pageProps deep scan, HTML scrape).`,
     );
   }
   await stage('🖼️ Fetching hero image', { source: heroUrl });

@@ -108,10 +108,14 @@ export async function listListing(): Promise<ListingEntry[]> {
 // ---------------------------------------------------------------------------
 export interface FetchedCampaign {
   campaign: Campaign;
-  // initialCampaignData object — the parent of campaignData. Carries any
-  // sibling fields (campaignMedia, media, images, etc.) that aren't part of
-  // the validated Campaign schema. Used only by the image resolver.
-  initialCampaignData: unknown;
+  // Full props.pageProps blob — includes initialCampaignData, the canonical
+  // top-level ogImageUrl Honeycomb populates for OG crawlers, and any other
+  // siblings. The image resolver looks here for the canonical field and
+  // deep-scans this whole blob.
+  pageProps: unknown;
+  // Raw SSR'd HTML body. Last-resort fallback for the image resolver
+  // (defense-in-depth — only reached if every JSON-side path comes up empty).
+  html: string;
 }
 
 export async function fetchCampaign(slug: string): Promise<FetchedCampaign> {
@@ -119,19 +123,15 @@ export async function fetchCampaign(slug: string): Promise<FetchedCampaign> {
   const html = await fetchHtml(`${BASE_URL}/campaigns/${encodeURIComponent(slug)}`);
   const data = extractNextData(html);
 
-  const initialCampaignData = get<unknown>(data, [
-    'props',
-    'pageProps',
-    'initialCampaignData',
-  ]);
-  if (!initialCampaignData || typeof initialCampaignData !== 'object') {
+  const pageProps = get<unknown>(data, ['props', 'pageProps']);
+  if (!pageProps || typeof pageProps !== 'object') {
     throw new ScrapeError(
       'DETAIL_SHAPE_DRIFT',
-      `Detail payload missing at props.pageProps.initialCampaignData for slug "${slug}".`,
+      `Detail payload missing at props.pageProps for slug "${slug}".`,
     );
   }
 
-  const raw = get<unknown>(initialCampaignData, ['campaignData', 'data']);
+  const raw = get<unknown>(pageProps, ['initialCampaignData', 'campaignData', 'data']);
   if (!raw || typeof raw !== 'object') {
     throw new ScrapeError(
       'DETAIL_SHAPE_DRIFT',
@@ -146,7 +146,7 @@ export async function fetchCampaign(slug: string): Promise<FetchedCampaign> {
       `Detail payload failed schema validation for slug "${slug}": ${parsed.error.message}`,
     );
   }
-  return { campaign: parsed.data, initialCampaignData };
+  return { campaign: parsed.data, pageProps, html };
 }
 
 // ---------------------------------------------------------------------------
@@ -235,18 +235,38 @@ function findImageUrlDeep(value: unknown, depth = 0): string | null {
   return null;
 }
 
-export function extractHeroImageUrl(campaign: Campaign, wider?: unknown): string | null {
-  // 1. Canonical (v3.3 spec)
+// Regex for the SSR HTML fallback. Anchors on Honeycomb's storage host so
+// it can't false-positive on logos, social icons, or external images
+// elsewhere in the page.
+const RENDERED_IMG_RE = /<img[^>]+src=["'](https?:\/\/storage\.googleapis\.com\/honeycomb-uploads\/[^"']+)["']/i;
+
+export function extractHeroImageUrl(
+  campaign: Campaign,
+  pageProps?: unknown,
+  html?: string,
+): string | null {
+  // 1. props.pageProps.ogImageUrl — the canonical top-level OG field
+  //    Honeycomb populates for social crawlers and link unfurls. Most
+  //    stable signal in the payload (Honeycomb's own previews depend on
+  //    it). Sibling of initialCampaignData; lives one level up from
+  //    campaignData.data, which is why earlier deep-scans missed it.
+  if (pageProps && typeof pageProps === 'object') {
+    const og = (pageProps as Record<string, unknown>)['ogImageUrl'];
+    if (typeof og === 'string' && looksLikeImageUrl(og)) return og;
+  }
+
+  // 2. campaign.ogImageUrl (v3.3 spec) — some campaign vintages carry the
+  //    same URL inside campaignData.data too.
   if (campaign.ogImageUrl && looksLikeImageUrl(campaign.ogImageUrl)) {
     return campaign.ogImageUrl;
   }
 
-  // 2. Top-level alternates that show up in some payloads
+  // 3. Top-level alternates on the campaign object
   const top = campaign as unknown as Record<string, unknown>;
   const direct = pickStringField(top, ['heroImageUrl', 'coverImageUrl', 'mainImageUrl', 'imageUrl', 'image']);
   if (direct) return direct;
 
-  // 3. campaignMedia array — most common newer location
+  // 4. campaignMedia array — common location for the hero on newer campaigns
   if (Array.isArray(campaign.campaignMedia)) {
     for (const item of campaign.campaignMedia) {
       if (typeof item === 'string' && looksLikeImageUrl(item)) return item;
@@ -257,17 +277,19 @@ export function extractHeroImageUrl(campaign: Campaign, wider?: unknown): string
     }
   }
 
-  // 4. Deep scan within campaignData.data.
-  const local = findImageUrlDeep(campaign);
-  if (local) return local;
-
-  // 5. Deep scan the wider initialCampaignData blob — siblings to
-  //    campaignData (campaignMedia, media, images, etc.) live here for some
-  //    platform variants. This is the catch-all that handles every campaign
-  //    we've observed where the URL isn't in campaignData.data at all.
-  if (wider !== undefined) {
-    const widerHit = findImageUrlDeep(wider);
+  // 5. Deep scan the entire pageProps blob (broader than the campaign-only
+  //    object — covers any sibling structures we haven't enumerated).
+  if (pageProps !== undefined) {
+    const widerHit = findImageUrlDeep(pageProps);
     if (widerHit) return widerHit;
+  }
+
+  // 6. SSR'd HTML <img> regex — defense-in-depth. Only reached if every
+  //    JSON-side path comes up empty. Less stable (DOM structure can churn
+  //    more than a deliberate prop), but a useful safety net.
+  if (typeof html === 'string') {
+    const m = html.match(RENDERED_IMG_RE);
+    if (m && m[1]) return m[1];
   }
 
   return null;
