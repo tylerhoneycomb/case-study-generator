@@ -1,0 +1,37 @@
+name: "Redraft with feedback"
+description: "Regenerate one published case study with reviewer feedback."
+title: "[Redraft] "
+labels: ["form: redraft-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when a published case study needs targeted changes. The agent
+        regenerates the page with your feedback included in the prompt.
+  - type: input
+    id: slug
+    attributes:
+      label: Slug
+      description: "The case-study slug, matching src/content/case-studies/{slug}.mdx"
+      placeholder: "brothmonger-bone-broth-brooklyn"
+    validations:
+      required: true
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+      description: "What should the next draft do differently? Be specific — quote phrases or reference paragraphs."
+      placeholder: |
+        - The hero subhead is too generic; lean on the second-oven detail.
+        - Drop the tricolon in paragraph three.
+        - The CTA reads as marketing-speak.
+      render: markdown
+    validations:
+      required: true
+  - type: checkboxes
+    id: ack
+    attributes:
+      label: Acknowledgment
+      options:
+        - label: I understand this consumes one rate-limit token and overwrites the existing MDX.
+          required: true

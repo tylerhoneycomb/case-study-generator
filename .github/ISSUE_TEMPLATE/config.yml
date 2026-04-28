@@ -1,0 +1,7 @@
+# Disable blank issues — every operation should go through a structured path.
+# Auto-detection issues are opened by the agent itself.
+blank_issues_enabled: false
+contact_links:
+  - name: Open invest.honeycombcredit.com
+    url: https://invest.honeycombcredit.com
+    about: Browse active campaigns. funded.honeycombcredit.com only carries case studies for campaigns that already closed.

@@ -1,0 +1,53 @@
+name: Detect
+# Daily detection of newly funded campaigns. Per scope Section 6: cron at
+# noon UTC, plus workflow_dispatch for manual runs. The script opens a
+# tracking issue per newly-funded campaign, generates the case study, commits
+# the MDX + hero image, and updates .state/observed-fundraising.json.
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # noon UTC daily
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Dry run (skip generation, only scan)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Run detection
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FUNDED_BOT_IDENTITY: '1'
+        run: |
+          if [[ "${{ inputs.dry-run }}" == "true" ]]; then
+            npx tsx scripts/detect.ts --dry-run
+          else
+            npx tsx scripts/detect.ts
+          fi
+
+      - name: Push commits
+        if: ${{ inputs.dry-run != 'true' }}
+        run: |
+          # detect.ts commits state changes + per-slug content commits.
+          # Push them all in one go.
+          git push origin HEAD:main || echo "Nothing to push."

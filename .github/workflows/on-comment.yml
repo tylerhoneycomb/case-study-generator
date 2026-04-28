@@ -1,0 +1,60 @@
+name: On Comment
+# Listens for /funded slash commands in issue/PR comments. The auth boundary
+# is `author_association` (OWNER, COLLABORATOR, MEMBER) — non-collaborators
+# are silently ignored.
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  dispatch:
+    if: |
+      startsWith(github.event.comment.body, '/funded ') &&
+      (
+        github.event.comment.author_association == 'OWNER' ||
+        github.event.comment.author_association == 'COLLABORATOR' ||
+        github.event.comment.author_association == 'MEMBER'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: React to command
+        # Acknowledge receipt so the user sees it landed before the run completes.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" \
+            -d '{"content":"eyes"}' >/dev/null
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Dispatch /funded command
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          FUNDED_BOT_IDENTITY: '1'
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: npx tsx scripts/dispatch-comment.ts
+
+      - name: Push commits
+        run: git push origin HEAD:main || echo "Nothing to push."
