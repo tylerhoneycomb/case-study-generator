@@ -58,7 +58,19 @@ const STORAGE_URL =
   'https://storage.googleapis.com/honeycomb-uploads/uploads/campaignMedia-1769609237409-875286201_tiny.png';
 
 describe('extractHeroImageUrl', () => {
-  it('prefers the canonical ogImageUrl when present', () => {
+  it('prefers pageProps.ogImageUrl above all other fields (canonical OG)', () => {
+    // The-Saucy-African pattern: ogImageUrl lives at props.pageProps.ogImageUrl,
+    // a sibling of initialCampaignData. Most stable signal — Honeycomb's own
+    // social previews depend on it.
+    const c = makeCampaign({
+      // even with a different URL on the campaign object, pageProps wins
+      ogImageUrl: 'https://storage.googleapis.com/honeycomb-uploads/wrong.png',
+    });
+    const pageProps = { ogImageUrl: STORAGE_URL };
+    expect(extractHeroImageUrl(c, pageProps)).toBe(STORAGE_URL);
+  });
+
+  it('falls back to campaign.ogImageUrl when pageProps.ogImageUrl is absent', () => {
     const c = makeCampaign({
       ogImageUrl: STORAGE_URL,
       campaignMedia: [{ url: 'https://example.com/wrong.png' }],
@@ -92,14 +104,16 @@ describe('extractHeroImageUrl', () => {
     expect(extractHeroImageUrl(c)).toBe(STORAGE_URL);
   });
 
-  it('deep-scans for a honeycomb-uploads URL when no known field has it', () => {
-    // The-Saucy-African-style payload — image URL buried deep, no top-level field
-    const c = makeCampaign({
-      campaignStories: [
-        { paragraphs: [{ media: { thumb: STORAGE_URL } }] },
-      ],
-    });
-    expect(extractHeroImageUrl(c)).toBe(STORAGE_URL);
+  it('deep-scans pageProps for a buried honeycomb-uploads URL when no canonical field resolves', () => {
+    // Defense-in-depth: image URL buried deep in a sibling subtree under
+    // pageProps. Caller passes pageProps; resolver finds it via deep-scan.
+    const c = makeCampaign({});
+    const pageProps = {
+      someBlob: {
+        campaignStories: [{ paragraphs: [{ media: { thumb: STORAGE_URL } }] }],
+      },
+    };
+    expect(extractHeroImageUrl(c, pageProps)).toBe(STORAGE_URL);
   });
 
   it('returns null when there is no image-shaped URL anywhere', () => {
@@ -115,5 +129,28 @@ describe('extractHeroImageUrl', () => {
       campaignMedia: [],
     });
     expect(extractHeroImageUrl(c)).toBeNull();
+  });
+
+  it('falls back to scraping the SSR HTML when no JSON path resolves', () => {
+    // Real-world shape: empty campaign + an unrelated wider blob, but the
+    // rendered HTML contains the <img> tag (this is the The-Saucy-African
+    // pattern — URL constructed at render time, not literally in the JSON).
+    const c = makeCampaign({});
+    const html = `<html><body>
+      <img class="_0506be9e" src="${STORAGE_URL}" alt="campaign image">
+    </body></html>`;
+    expect(extractHeroImageUrl(c, undefined, html)).toBe(STORAGE_URL);
+  });
+
+  it('HTML fallback ignores non-Honeycomb image hosts', () => {
+    // Pages have logos, social icons, etc. — those should NOT be picked up
+    // as the hero. Anchoring on storage.googleapis.com/honeycomb-uploads
+    // keeps the regex narrow enough.
+    const c = makeCampaign({});
+    const html = `<html><body>
+      <img src="https://example.com/logo.png" alt="logo">
+      <img src="https://cdn.othersite.com/banner.jpg" alt="banner">
+    </body></html>`;
+    expect(extractHeroImageUrl(c, undefined, html)).toBeNull();
   });
 });
