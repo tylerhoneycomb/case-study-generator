@@ -166,7 +166,16 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   });
 
   // ---- 5. Compose frontmatter + write MDX ----
-  const percent = target > 0 ? (totalFundsRaised / target) * 100 : 0;
+  // Round all numeric fields to integers — the content-collection schema
+  // (src/content/config.ts) requires .int() and Honeycomb's payload can
+  // carry floating-point values for monetary fields (e.g., 46841.5
+  // serialized as 46841.50001525879 due to JSON float imprecision). Without
+  // rounding, the build fails Astro content validation and the deploy
+  // never lands.
+  const amountRaisedInt = Math.round(totalFundsRaised);
+  const goalAmountInt = Math.round(target);
+  const investorsInt = Math.round(investors);
+  const percent = goalAmountInt > 0 ? (amountRaisedInt / goalAmountInt) * 100 : 0;
   const frontmatter = {
     businessName: campaign.campaignName,
     niche: claude.output.niche,
@@ -179,13 +188,13 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     heroImage: img.publicPath,
     heroImageAlt: claude.output.heroImageAlt,
     ogImage: img.publicPath,
-    amountRaised: totalFundsRaised,
-    amountRaisedFormatted: formatMoney(totalFundsRaised),
-    goalAmount: target,
-    goalAmountFormatted: formatMoney(target),
+    amountRaised: amountRaisedInt,
+    amountRaisedFormatted: formatMoney(amountRaisedInt),
+    goalAmount: goalAmountInt,
+    goalAmountFormatted: formatMoney(goalAmountInt),
     percentOfGoal: Math.round(percent),
     percentOfGoalFormatted: formatPercent(percent),
-    investorCount: investors,
+    investorCount: investorsInt,
     timeToFund: formatTimeToFund(start, end),
     metaTitle: claude.output.metaTitle,
     metaDescription: claude.output.metaDescription,
