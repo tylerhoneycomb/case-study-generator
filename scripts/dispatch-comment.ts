@@ -12,7 +12,10 @@
 //
 // Supported commands (per scope Section 6):
 //   /funded generate <campaign-slug>
-//   /funded redraft <case-study-slug> <feedback…>
+//   /funded redraft <case-study-slug> [feedback…]
+//        Single-line feedback after the slug is passed verbatim to Claude.
+//        For multi-paragraph feedback, use the "Redraft with feedback"
+//        Issue Form instead.
 //   /funded delete <case-study-slug>
 //   /funded status
 //   /funded cost-estimate <slug…>
@@ -88,10 +91,17 @@ async function main(): Promise<void> {
     }
     case 'redraft': {
       if (parsed.args.length < 1) {
-        await stage('❌ `/funded redraft <slug>` — missing slug.');
+        await stage('❌ `/funded redraft <case-study-slug> [feedback…]` — missing slug.');
         process.exit(2);
       }
-      await runCli('scripts/redraft.ts', [parsed.args[0]!, issueArg]);
+      const slug = parsed.args[0]!;
+      // Everything after the slug, joined with spaces, becomes the
+      // feedback string. Single-line only — for multi-paragraph feedback,
+      // use the "Redraft with feedback" Issue Form.
+      const feedback = parsed.args.slice(1).join(' ').trim();
+      const cliArgs = [slug, issueArg];
+      if (feedback.length > 0) cliArgs.push(`--feedback=${feedback}`);
+      await runCli('scripts/redraft.ts', cliArgs);
       break;
     }
     case 'delete': {
