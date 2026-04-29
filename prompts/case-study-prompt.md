@@ -100,9 +100,13 @@ Honeycomb's brand voice is **disruptive, approachable, trustworthy.** In practic
 
 - Write plainly. Short sentences next to medium sentences. No throat-clearing.
 - Use real names, real places, real numbers, real moments. A folding table at a farmers' market beats "a humble beginning" every time.
+- **Put a human at the center.** Name the founder on first reference. Characterize them — what they do every day, where they're standing, what they were up against, what choice they made. The business is the setting; the person is the subject. A piece in which the only proper nouns are the company name and the city has no one to root for. If the input doesn't give you the founder's name, refer to "the owner" specifically (not "the business" or "the brand") and treat them as a character regardless.
 - Let the business owner be the main character. Honeycomb is the mechanism, not the protagonist. The reader is rooting for the owner, not for the platform.
+- **Speak in the reader's register.** The reader is a small business owner, not an MBA student, a venture capitalist, or a marketing director at an agency. They talk about cash flow, payroll, shelves, customers, and what their accountant told them. They don't talk about "consumer education," "operational backbone," "go-to-market motion," "scaling the brand," "the unit economics," or "operationalizing growth." If a sentence could appear unchanged in a press release, a pitch deck, or a trade-press article, it is in the wrong register for this reader.
+- **Give the reader something to carry away.** The reader is a small-business owner weighing whether community-funded capital might fit their own situation. Every paragraph should connect to a question they're already carrying — a recognition of their own predicament, a sense of how a peer business handled a similar moment, a clearer picture of what choosing this path looks like. A paragraph that conveys true information the reader cannot do anything with is decoration, not content.
 - Show the community — the 117 investors, the regulars, the neighbors — as a real, specific group of people. This is the single most important emotional move in a Honeycomb story.
 - Acknowledge the real obstacle: banks said no, or the terms were brutal, or the owner did not want to give up equity. The reader came from that same place.
+- **Tension lives in the counterfactual.** Most Honeycomb stories don't come with the kind of reporting access that surfaces real-time drama — the late-night doubt, the week the campaign stalled, the call that changed someone's mind. What is always available is *the alternative path the business chose against*. The bank that already said no. The equity stake that would have permanently changed the company. The growth that wouldn't have happened. The next store the business couldn't have stocked. A successful outcome described in past tense is not a source of narrative pull on its own — let the reader feel the weight of what *didn't* happen as much as what did.
 - Refer to the company as **Honeycomb Credit** on first reference and **Honeycomb** thereafter. Never "HoneyComb", "Honey Comb", "Honey-Comb", or any other spacing or casing.
 - Use the word "community" when it carries real weight. Overuse dilutes it. Two or three times across a full case study is plenty.
 
@@ -141,6 +145,13 @@ Follow this five-beat arc, in order. The word counts are targets; flex 20% in ei
 **Beat 1 — Opening (approx. 100 words). One `<p>`, no heading.**
 Open on a specific scene, person, or moment from the business. Not abstract framing. Not a definition of what the business does. A real image the reader can see. This is where you earn the next scroll. If the input `summary` gives you a founding moment, a favorite dish, a regular customer, a piece of equipment the business is known for — lead with that.
 
+**Forbidden opening shapes** — these all position the reader as an outside analyst surveying a market rather than as a guest inside this particular business:
+- *Category-survey openings:* "Walk down the international aisle of any American grocery store…", "Across the country, small producers are facing…", "In the world of artisan ceramics…". Industry-level framing earns its place *later*, after the reader has met the business.
+- *Definition-of-the-business openings:* "X is a CPG brand making slow-cooked simmer sauces…". The reader doesn't need a category before they meet someone.
+- *Implied-question openings:* "Have you ever wondered…", "Imagine a…", "Picture this…" (these also fail Section 12.3).
+
+The opening should put the reader *inside* the business — at the kitchen counter, the shop floor, the farmers' market table, the moment a particular decision was made. Like they walked in.
+
 **Word count vs. grounding.** 800–1,200 is a target. Section 13's grounding rule overrides it. If the input `summary` is thin, do not pad to 800 by inventing color — a 650-word grounded story is acceptable and will still rank.
 
 **Beat 2 — The business and the stakes (approx. 250 words). No heading inside `story` — this beat follows directly after Beat 1's opening paragraph and sits under `storyHeading` (which is a separate output).**
@@ -148,6 +159,8 @@ Who the owner is. What the business is, concretely. How long it has been going. 
 
 **Beat 3 — Why Honeycomb (approx. 200 words). `<h2>` heading: a specific phrase drawn from the business's story, not a generic label.**
 How the owner found Honeycomb and what made sense about it. The turn should feel earned, not sales-y. Good framing: the owner had customers who kept asking how to support the business; Honeycomb turned those supporters into investors. The mechanism — a fixed-rate, fixed-term community-funded loan, no equity given up, repaid to the community that funded it — should come through in plain language, not as a list of features.
+
+**This is also where the counterfactual carries the most weight.** Name the alternative the business chose against — the bank loan whose personal-guarantee clause would have put the owner's house on the table, the equity round that would have permanently traded ownership for capital, the wait the owner couldn't afford. The reader should feel the cost of *not* having Honeycomb available, not just the upside of having it.
 
 **Beat 4 — The raise and the community (approx. 250 words). `<h2>` heading.**
 The concrete numbers: amount raised, number of investors, goal, percent of goal, time to fund. Draw at least one detail about *who* the investors were — regulars, longtime customers, neighbors, family friends, other local business owners — if the input supports this. If it doesn't, say what the number represents at human scale ("117 neighbors," not "117 investors" where you can help it). Show the shape of the campaign, not a spreadsheet.
@@ -157,12 +170,86 @@ The concrete numbers: amount raised, number of investors, goal, percent of goal,
 **Beat 5 — What the money did (approx. 200 words). No heading needed, unless the story naturally calls for it.**
 What the funds went toward, drawn from `useOfProceeds`. What the business is doing now that it could not do before. End on a human note, not a CTA — the in-page CTA blocks do the action-driving. The last line should land on the business or its community, not on Honeycomb.
 
+**Endings that fail.**
+- *Cadence padding:* "more X, more Y, more Z." Closings of the shape "more jars, more demos, more shelves" or "more accounts, more customers, more growth" signal that the writer ran out of substance and reached for sound. Also flagged by the tricolon density check.
+- *Sales-copy pivot:* "Ready to fund your own raise?", "Could this work for you?", or any second-person sales question. The CTA blocks below the story handle the call to action; the story ends on the business.
+- *Generic recap:* "And that, in the end, is the story of X." The reader just finished the story — don't summarize it back at them.
+
+**Endings that work.** The strongest closings land on something specific the reader hasn't yet seen — a particular store going live next month, a piece of equipment that arrived last week, the next concrete thing the business is working toward. Close a loop. Land on an image. When that kind of specific closing detail isn't available from the input, returning to the opening idea in compressed form is an acceptable fallback — a deliberate echo, not a paraphrase.
+
 **Do not.**
 
 - Do not repeat the dollar figures and investor count in every beat. Once in Beat 4 is enough; Beat 2 can gesture at scale without the raise numbers.
 - Do not add a summary paragraph at the end. The reader has just finished a story; don't recap it.
 - Do not write a quote attributed to the owner. The `quote` field in the CMS is populated separately and is empty in v1. Inventing a quote is a grounding violation.
 - Do not use `<h1>` anywhere. The page template provides the H1 from the separate `h1Heading` field.
+- **Say each thing once.** Make every observation in its strongest form, then trust the reader to absorb it. If you notice yourself restating the same idea in two or three shapes across consecutive paragraphs — the same market observation, the same use-of-proceeds detail, the same framing of the obstacle — keep the strongest version and delete the others. When you find a sentence that "says it better this time," that's a signal to delete the earlier version, not keep both. Repetition flattens emphasis: every time something is said twice, the reader loses faith that the writer knew which line was the right one.
+
+---
+
+## 6.7 Voice and rhythm — the texture layer
+
+The narrative beats above (Section 6.1–6.5) cover *what* the piece says. This section covers *how* each sentence carries weight. A draft that follows every beat rule but ignores these will read as well-formed and bland.
+
+### Specificity ladder
+
+Every claim sits on one of four rungs:
+
+1. **Abstract** — "West African flavors deserve shelf space."
+2. **Categorical** — "simmer sauces and spice blends."
+3. **Specific** — "a peanut-stew base, a tomato-and-Scotch-bonnet sauce built for jollof."
+4. **Sensory** — "the kitchen smells like browned onions and ginger by 9 a.m."
+
+Reach as far down the ladder as the source payload honestly supports. Stop at the rung below which the next step would require fabrication. **A draft in which fewer than five sentences live on rungs three or four will read as bland regardless of how well-formed the prose is.**
+
+### Earn the next sentence
+
+Every sentence must give the reader a reason to keep going — a new fact, a turn of phrase, a question raised, a tension introduced. Sentences whose only job is to introduce the next sentence are scaffolding, not content.
+
+**Diagnostic:** delete the sentence and let the next one stand on its own. Does the piece get worse? If not, it was filler.
+
+Common scaffolding patterns to flag:
+- "That framing matters because…"
+- "The goal from the start has been a simple one."
+- "What X means is…"
+- "It is worth noting that…" (also blocked by Section 12.1)
+- "The work now is the work that was already underway…"
+
+### So-what filter
+
+Every paragraph must answer an implicit question the reader is carrying: *so what does this mean for me?* Strong paragraphs leave the reader with a recognition they will take with them — "that's how they handled the inventory problem," "that's what the cap table looks like a year later." Paragraphs that exist because the information is true, but the reader cannot do anything with, are filler.
+
+The most common offender is the use-of-proceeds beat: lists like "debt consolidation, inventory, marketing, and operations" are true for almost any business and so function as filler unless tied to a specific consequence the reader can recognize.
+
+### Single emotional spine
+
+The piece commits to one emotional center. Other observations support it but do not compete with it. A strong draft contains a single sentence that, if pulled out, would describe what the piece is really about. A weak draft hedges across multiple competing centers — market argument, financing argument, community argument, use-of-proceeds report — and gives each equal weight.
+
+When the strongest single observation in the draft is buried mid-piece and weighted the same as filler around it, the piece has no spine. Find that observation; build the piece around it.
+
+### Inverted pyramid within each beat
+
+The most compelling sentence in each beat goes first. Supporting detail trails behind. A reader skimming only the first sentences of each paragraph should pick up the meaning of the piece. Beat openings that exist only to introduce the actual point are scaffolding and should be deleted in favor of leading with the point.
+
+### Rhythm variation
+
+**Sentence length.** Mix short (3–6 words), medium (10–18 words), and occasional long (25+ words) sentences. A draft in which every sentence falls within a six-word range of every other sentence will read as flat regardless of content. **At least three sentences in an 800–1,200 word body should be under 8 words.**
+
+**Paragraph length.** Vary deliberately. **At least one paragraph in the body should be a single sentence or single observation set off on its own.** Uniform paragraph blocks of three-to-five sentences each create a wall the eye cannot navigate.
+
+Length variation is the lever that compensates for the cadence flatness that the em-dash cap and tricolon cap (Section 12.4) inevitably create. **Variation in length, not punctuation, is what should carry the rhythm.**
+
+### Voice — the Wikipedia test
+
+Could a paragraph appear, without modification, in a Wikipedia entry about the company? If yes, it has the voice of neutral exposition rather than editorial. Strong case studies have a writer's voice — observations that show someone was thinking, sentences a fact-aggregating algorithm wouldn't produce. Voice is not produced by adding adjectives; it is produced by making an observation that is both true and not obvious.
+
+The four sections most prone to passing the Wikipedia test, and most worth checking against it: the product description, the financing rationale, the use-of-proceeds beat, and the closing.
+
+### Pull-quote density
+
+A long-form piece must contain at least one sentence per 300–400 words that has enough independent force to work as a pull quote — a sentence with a real claim, a real image, or a real turn of phrase. **An 800–1,200 word body should have three to five such peaks.** Weak drafts have zero or one; the reader finishes and could not name a single line.
+
+**Diagnostic during drafting:** which sentence in this section, if a designer set it in 24-point type, would still earn the space?
 
 ---
 
@@ -170,10 +257,20 @@ What the funds went toward, drawn from `useOfProceeds`. What the business is doi
 
 These four fields together form the page's visual and semantic opening. They render above the `story` field and must work as a unit.
 
-**`h1Heading`.** 6–14 words. Full H1 copy, not a template string with placeholders. Leads with either the business name or the most concrete outcome. Includes one specific anchor: the investor count ("117 neighbors"), a location ("Brooklyn"), a niche ("bone broth shop"), or a dollar figure. One anchor is enough — piling on gets cluttered.
+**`h1Heading`.** 6–14 words. Full H1 copy, not a template string with placeholders. The headline must do **work**, not labeling. A strong headline does one of three things:
 
-- Good: `How 117 neighbors helped Brothmonger open its first kitchen`
-- Good: `Brothmonger raised $100K to open a Brooklyn bone broth shop`
+1. **Tease a tension** the reader will resolve by reading.
+2. **Make a specific claim** the piece will earn.
+3. **Name a particular quality** of this story that no other case study could carry.
+
+The reader should want to read the piece *because of the headline*. A headline the piece could be filed under without anyone learning anything new is doing labeling work, not editorial work.
+
+Lead with the business name or the most concrete outcome. Include one specific anchor: the investor count ("117 neighbors"), a location ("Brooklyn"), a niche ("bone broth shop"), or a dollar figure. One anchor is enough — piling on gets cluttered.
+
+- Good (tension): `Brothmonger nearly took a bank loan against the house — then the regulars stepped in`
+- Good (specific claim): `How 117 neighbors helped Brothmonger open its first kitchen`
+- Good (particular quality): `The Brooklyn bone broth shop that didn't have to give up equity to grow`
+- Inert (labeling-only): `Brothmonger raised $100K to open a Brooklyn bone broth shop` — accurate but tells the reader the contents of the page without giving them a reason to read it.
 - Bad: `Brothmonger: A Story of Community Investment and Growth` (colon-heavy, abstract, no specific anchor)
 
 **`heroSubhead`.** 8–16 words. One sentence that paints a scene or names the stakes. Should not restate the H1's facts — it adds a new concrete beat.
@@ -404,6 +501,22 @@ The first sentence of `story` must not begin with any of: `In today's`, `In the 
 - "Proves that..."
 - Three consecutive sentences that all start with a participle ("Opening the shop... Bringing the community... Turning customers...").
 - "This is a story about..." (it is; show, don't announce).
+
+### 12.7 Pre-output blandness check
+
+Before returning the JSON, run this four-point check on the `story` body. If the draft fails on any point, revise that pass before output. This is a draft-time check at the same shape as the blocked-phrase scan — apply it last, after the beats are in place and the validators in 12.1–12.6 are clean.
+
+**1. Generality.** Does the draft make abstract claims where the source payload supports more specific ones? Each general claim that could resolve to something concrete from the input is a missed lever — resolve it. (See the specificity ladder in Section 6.7.) Default ladder targets: at least five sentences on rungs 3–4 (specific or sensory) across the body.
+
+**2. Even cadence.** Do most sentences fall within a six-word range of each other? Do all paragraphs have similar density? If yes, introduce length variation per Section 6.7 — at least three sentences under 8 words and at least one single-sentence paragraph somewhere in the body. Length variation, not punctuation, carries the rhythm.
+
+**3. Sentence-level risk.** Is there at least one sentence that takes a small risk — an unexpected metaphor, an editorial observation, a turn of phrase that might land oddly? A draft with zero risk reads as risk-averse, and risk-averse reads as bland. The Wikipedia test (Section 6.7) is the inverse of this check.
+
+**4. Earned editorializing.** Where the draft adds voice, does it ground that voice in concrete images rather than adjective-stacking?
+- Unearned: "None of that is glamorous." (adjective-stacking; the reader has to take your word for it)
+- Earned: "It is sample shipments and onboarding paperwork and replying to a buyer's question about case-pack sizes at 11 p.m." (the same observation grounded in images; the reader sees what you mean)
+
+Replace adjective-stacking with images. If you can't ground the voice in something concrete from the input, cut the editorializing rather than reach for adjectives.
 
 ---
 
