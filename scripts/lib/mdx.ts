@@ -77,6 +77,36 @@ export async function deleteCaseStudy(slug: string): Promise<boolean> {
   }
 }
 
+// Find an existing case study by its source-platform campaignSlug (not by
+// the case-study filename). Walks every MDX in the collection, parses
+// frontmatter, returns the first match.
+//
+// This is what makes generate.ts idempotent on the *campaign* — the agent
+// can run /funded generate <honeycomb-slug> repeatedly without producing
+// duplicate MDX files even though Claude tends to pick slightly different
+// case-study slugs across calls.
+export async function findByCampaignSlug(
+  campaignSlug: string,
+): Promise<{ slug: string; path: string; frontmatter: Record<string, unknown> } | null> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(CONTENT_DIR);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw err;
+  }
+  for (const name of entries) {
+    if (!name.endsWith('.mdx')) continue;
+    const slug = name.slice(0, -'.mdx'.length);
+    const file = await readCaseStudy(slug);
+    if (!file) continue;
+    if (file.frontmatter['campaignSlug'] === campaignSlug) {
+      return { slug, path: caseStudyPath(slug), frontmatter: file.frontmatter };
+    }
+  }
+  return null;
+}
+
 export const paths = {
   CONTENT_DIR,
 } as const;

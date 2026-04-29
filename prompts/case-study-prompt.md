@@ -262,25 +262,27 @@ Produce a single JSON-LD array containing **two** items: one `LocalBusiness` (or
 
 **Required properties on the business object:**
 - `@context`: `"https://schema.org"`
+- `@id`: `"#business"` — short URI fragment so the Article below can reference this entity instead of inlining a duplicate copy
 - `@type`: the subtype from the table above
 - `name`: from `campaignName`
 - `address`: a `PostalAddress` with `addressLocality` (city), `addressRegion` (state abbrev), `addressCountry: "US"`. Street address is optional; omit if not in input.
 - `description`: one sentence pulled or paraphrased from `issuer.description` or `summary`. Keep short.
+- `image`: from the `ogImageUrl` value in the input payload. Required when `ogImageUrl` is present in input. Omit only if `ogImageUrl` is missing entirely.
 
 **Recommended properties when supported by input:**
 - `url`: from `issuer.website` if present and valid
-- `image`: omit — the agent handles image URLs outside this field
 - `keywords`: populate from the keyword tags you generated in Section 8, joined as a comma-separated string
 
 **Article object required properties:**
 - `@context`, `@type: "Article"`
 - `headline`: use the `h1Heading` you produced above
+- `image`: from the `ogImageUrl` value in the input payload (same URL as on the business object). Required when present in input.
 - `datePublished`: use the `todayISO` value from the input payload
-- `author`: `{"@type": "Organization", "name": "Honeycomb Credit"}`
+- `author`: `{"@type": "Organization", "name": "Honeycomb Credit", "url": "https://honeycombcredit.com"}` — the `url` field is required for the rich-results E-A-T signal.
 - `publisher`: `{"@type": "Organization", "name": "Honeycomb Credit", "url": "https://honeycombcredit.com"}`
 - `description`: `metaDescription`
 - `keywords`: same comma-separated string as on the business object
-- `about`: a minimal reference back to the business object (`{"@type": "<subtype>", "name": "<campaignName>"}`)
+- `about`: a reference to the business entity by `@id`, NOT an inline copy. Use exactly `{"@id": "#business"}`. This avoids Google detecting two FoodEstablishment entities with mismatched fields.
 
 **Size cap.**
 The entire stringified `systemSchemaJson` must stay under **8,000 characters**. Most will come in well under 2,000. If you are near 8,000, you have added too much. Trim `description` fields first.
@@ -372,7 +374,18 @@ The first sentence of `story` must not begin with any of: `In today's`, `In the 
 
 ### 12.4 Density-limited patterns
 
-- **Tricolons** — the "A, B, and C" three-item parallel list, where each item is 1–3 words. Fine in small doses; over-reliance reads as AI cadence. Keep under **1 per 500 words** to stay comfortably below the validator's ceiling of 2 per 500 words.
+- **Tricolons — the most common AI tell to manage in this work.** The "A, B, and C" pattern where each item is 1–3 words is the rhythm Claude reaches for when describing scope (`pastas, soups, and grains`), categorizing (`Italian, Mexican, and Asian profiles`), or surveying surfaces (`website, social channels, and storefront`). The validator's hard ceiling is 2 per 500 words; a 1,000-word story above 4 tricolons fails. **Target zero or one tricolon across the entire body.** Save the construction for a moment that genuinely earns it (a memorable list of investor archetypes, the three things the owner did first with the money) — not for routine description.
+
+  Before generating each sentence with three parallel items, ask: do you need to name three? Could one specific example let the reader infer the rest? Could the list become a single descriptive phrase or a clause?
+
+  | Tricolon (avoid) | Better |
+  |---|---|
+  | `pastas, soups, proteins, grains` | `whatever's already on the stove` |
+  | `Italian, Mexican, and Asian profiles` | `the same place Italian flavors already hold` |
+  | `website, social channels, and storefront` | `the storefront and everywhere the brand lives online` |
+  | `inventory, marketing, and operations` | `inventory, plus the marketing and back-office work that comes with new stores` |
+  | `more jars, more demos, more shelves` | `the work that was already underway, with more of the runway it needs` (the closing-cadence variant — also avoid) |
+
 - **Em-dashes** (`—`) — keep under **1 per 500 words**. Prefer commas or periods.
 
 ### 12.5 Content failure modes
