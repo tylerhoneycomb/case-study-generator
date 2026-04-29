@@ -11,6 +11,17 @@ describe('formatMoney', () => {
   it('handles zero', () => {
     expect(formatMoney(0)).toBe('$0');
   });
+  it('handles JSON-float-imprecision values (real Honeycomb payload)', () => {
+    // The Saucy African ran $46,841.50 principal through Honeycomb's
+    // serializer and came out as 46841.50001525879. The amountRaisedFormatted
+    // path uses formatMoney, but the amountRaised number field used to pass
+    // through unrounded — that broke Astro content-collection .int()
+    // validation and 404'd the deploy. Pipeline now Math.rounds before
+    // writing; this test documents the realised-in-the-wild value so any
+    // future regression has a target to break.
+    expect(formatMoney(46841.50001525879)).toBe('$46,842');
+    expect(Math.round(46841.50001525879)).toBe(46842);
+  });
 });
 
 describe('formatPercent', () => {
