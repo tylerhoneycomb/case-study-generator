@@ -11,11 +11,12 @@
 //   COMMENT_USER   — github login (already collaborator-checked by the workflow)
 //
 // Supported commands (per scope Section 6):
-//   /funded generate <slug>
-//   /funded redraft <slug>
-//   /funded delete <slug>
+//   /funded generate <campaign-slug>
+//   /funded redraft <case-study-slug> <feedback…>
+//   /funded delete <case-study-slug>
 //   /funded status
-//   /funded cost-estimate <slug...>
+//   /funded cost-estimate <slug…>
+//   /funded inspect <campaign-slug>   ← diagnostic; prints what's in __NEXT_DATA__
 // =============================================================================
 
 import { spawn } from 'node:child_process';
@@ -113,8 +114,16 @@ async function main(): Promise<void> {
       await runCli('scripts/cost-estimate.ts', [...parsed.args, issueArg]);
       break;
     }
+    case 'inspect': {
+      if (parsed.args.length < 1) {
+        await stage('❌ `/funded inspect <slug>` — missing slug.');
+        process.exit(2);
+      }
+      await runCli('scripts/inspect.ts', [parsed.args[0]!, issueArg]);
+      break;
+    }
     default: {
-      await stage(`❌ Unknown command \`/funded ${parsed.command}\`. Supported: generate, redraft, delete, status, cost-estimate.`);
+      await stage(`❌ Unknown command \`/funded ${parsed.command}\`. Supported: generate, redraft, delete, status, cost-estimate, inspect.`);
       process.exit(2);
     }
   }

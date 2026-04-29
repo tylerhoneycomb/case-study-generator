@@ -23,6 +23,7 @@ import { formatMoney, formatPercent, formatTimeToFund, todayISO } from './format
 import type { Campaign } from './schemas.js';
 
 export interface RunOptions {
+  // Honeycomb campaign slug — what fetchCampaign() looks up.
   slug: string;
   // Optional: caller-supplied feedback (used by redraft)
   feedback?: string;
@@ -30,6 +31,11 @@ export interface RunOptions {
   // historical campaigns may have stages other than "Funded" but should
   // still be published.
   skipFundedCheck?: boolean;
+  // Optional: override the case-study slug Claude returns. Used by redraft
+  // so the regenerated MDX overwrites the existing file (preserving the
+  // public URL) instead of producing a sibling at a slightly different
+  // slug. Generate doesn't pass this — it uses Claude's chosen slug.
+  forcedOutputSlug?: string;
 }
 
 export interface RunResult {
@@ -159,10 +165,14 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
       `Campaign "${slug}" has no findable hero image (checked pageProps.ogImageUrl, campaign.ogImageUrl, top-level alternates, campaignMedia, pageProps deep scan, HTML scrape).`,
     );
   }
+  // The output case-study slug. Caller (e.g. redraft) can pin it to keep
+  // the existing URL stable; otherwise we use whatever Claude generated.
+  const outputSlug = opts.forcedOutputSlug ?? claude.output.slug;
+
   await stage('🖼️ Fetching hero image', { source: heroUrl });
   const img = await fetchAndStoreHeroImage({
     ogImageUrl: heroUrl,
-    slug: claude.output.slug,
+    slug: outputSlug,
   });
 
   // ---- 5. Compose frontmatter + write MDX ----
@@ -210,7 +220,7 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   };
 
   const written = await writeCaseStudy({
-    slug: claude.output.slug,
+    slug: outputSlug,
     frontmatter,
     body: claude.output.story,
   });
@@ -219,17 +229,17 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   await git.configureBotIdentity();
   await git.add(written.path, `public${img.publicPath}`);
   const commitResult = await git.commit(
-    `feat(case-study): publish ${campaign.campaignName} (${claude.output.slug})`,
+    `feat(case-study): publish ${campaign.campaignName} (${outputSlug})`,
   );
   if (commitResult.committed) {
-    info('committed', { slug: claude.output.slug });
+    info('committed', { slug: outputSlug });
   } else {
-    warn('no changes to commit', { slug: claude.output.slug });
+    warn('no changes to commit', { slug: outputSlug });
   }
   const sha = await git.commitSha();
 
   return {
-    slug: claude.output.slug,
+    slug: outputSlug,
     publishedPath: written.path,
     imagePath: img.publicPath,
     estimatedCostUsd: claude.usage.estimatedCostUsd,

@@ -1,9 +1,19 @@
 #!/usr/bin/env tsx
 // =============================================================================
-// scripts/redraft.ts <slug> [--feedback="..."] [--issue=N]
+// scripts/redraft.ts <case-study-slug> [--feedback="..."] [--issue=N]
 //
-// Regenerate one case study with optional reviewer feedback. Overwrites the
-// existing MDX in place. Consumes 1 rate-limit token.
+// Regenerate one case study with optional reviewer feedback. The input is
+// the *case-study slug* (the URL path / MDX filename), NOT the Honeycomb
+// campaign slug — the redraft form and slash command both pass that.
+//
+// Pipeline:
+//   1. Read existing MDX → recover the campaignSlug from frontmatter
+//   2. Re-run the full pipeline against that campaignSlug
+//   3. Pin the output slug to the input case-study slug so the URL stays
+//      stable across redrafts (without this, Claude would pick a new slug
+//      each time and we'd accumulate orphaned files)
+//
+// Consumes 1 rate-limit token.
 // =============================================================================
 
 import { parseArgs, requirePositional } from './lib/args.js';
@@ -11,10 +21,11 @@ import { setTrackingIssue, info, error as logError, stage } from './lib/log.js';
 import { runPipeline, PipelineError } from './lib/pipeline.js';
 import { consume, canConsume, RateLimitExceeded } from './lib/ratelimit.js';
 import { addLabel, addComment } from './lib/github.js';
+import { readCaseStudy } from './lib/mdx.js';
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const slug = requirePositional(args, 0, '<slug>');
+  const caseStudySlug = requirePositional(args, 0, '<case-study-slug>');
   const feedback = args.values['feedback'];
   const issueRaw = args.values['issue'];
   const issueNumber = issueRaw ? Number.parseInt(issueRaw, 10) : null;
@@ -23,7 +34,24 @@ async function main(): Promise<void> {
     setTrackingIssue(issueNumber);
   }
 
-  info(`redraft start`, { slug, hasFeedback: Boolean(feedback) });
+  info(`redraft start`, { caseStudySlug, hasFeedback: Boolean(feedback) });
+
+  // Look up the existing MDX so we can read its campaignSlug and run the
+  // pipeline against the right Honeycomb campaign.
+  const existing = await readCaseStudy(caseStudySlug);
+  if (!existing) {
+    await stage(
+      `❌ No case study found at \`/${caseStudySlug}\`. Use the case-study slug (the URL path), not the Honeycomb campaign slug.`,
+    );
+    process.exit(2);
+  }
+  const campaignSlug = existing.frontmatter['campaignSlug'];
+  if (typeof campaignSlug !== 'string' || campaignSlug.length === 0) {
+    await stage(
+      `❌ Case study at \`/${caseStudySlug}\` has no campaignSlug in its frontmatter. Hand-edit the MDX to add it, then retry.`,
+    );
+    process.exit(2);
+  }
 
   if (!(await canConsume())) {
     await stage('⏸ Rate limit reached. Redraft queued for tomorrow.');
@@ -44,12 +72,17 @@ async function main(): Promise<void> {
   }
 
   try {
-    // Redraft is just runPipeline with feedback + skipFundedCheck (the
-    // campaign is already a published case study, so the funded gate is
-    // moot and might fail if the platform later changed the stage).
-    const opts = feedback !== undefined
-      ? { slug, feedback, skipFundedCheck: true }
-      : { slug, skipFundedCheck: true };
+    // Run the pipeline against the recovered Honeycomb campaign slug, but
+    // pin the output slug so the regenerated MDX overwrites the existing
+    // file rather than producing a sibling at a slightly different slug.
+    // skipFundedCheck: a published case study might be a campaign whose
+    // platform stage has since drifted; the funded gate is moot here.
+    const opts = {
+      slug: campaignSlug,
+      forcedOutputSlug: caseStudySlug,
+      skipFundedCheck: true,
+      ...(feedback !== undefined ? { feedback } : {}),
+    };
     const result = await runPipeline(opts);
     const slugUrl = `https://funded.honeycombcredit.com/${result.slug}`;
     await stage(`✅ Redrafted — ${slugUrl}`, {

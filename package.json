@@ -17,7 +17,8 @@
     "generate": "tsx scripts/generate.ts",
     "redraft": "tsx scripts/redraft.ts",
     "delete": "tsx scripts/delete.ts",
-    "backfill": "tsx scripts/backfill.ts"
+    "backfill": "tsx scripts/backfill.ts",
+    "inspect": "tsx scripts/inspect.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.3",
