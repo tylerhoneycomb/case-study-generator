@@ -157,15 +157,34 @@ The opening should put the reader *inside* the business — at the kitchen count
 **Beat 2 — The business and the stakes (approx. 250 words). No heading inside `story` — this beat follows directly after Beat 1's opening paragraph and sits under `storyHeading` (which is a separate output).**
 Who the owner is. What the business is, concretely. How long it has been going. Scale (farmers' market booth, single storefront, two trucks, 4,000 units a month — whatever the input supports). Then the tension: what needed to change, and what traditional options were unavailable or wrong. Banks said no. Terms were hostile. Equity was non-negotiable. Growth required capital the business could not internally generate. Stay grounded in what the `summary` and `useOfProceeds` actually say.
 
+**The decision moment is what prospective borrowers are reading for.** This is the most persuasive beat for the small-business reader weighing whether to follow the same path. Where the input supports it, name the specifics:
+
+- The amount of debt the business was carrying or the rate it was at.
+- Whether the owner actually applied to a bank and was declined.
+- Whether they considered taking equity and walked away (and why).
+- Whether they tried a different lender or platform first.
+
+Where the input does *not* support those specifics, **say so honestly** rather than gloss with generic phrasing. "The owner didn't name the rate, but the existing debt service was eating the inventory budget" reads as truthful; "Existing debt was eating into monthly cash flow" reads as filler that could apply to any business. The reader trusts a piece that admits its information edges.
+
 **Beat 3 — Why Honeycomb (approx. 200 words). `<h2>` heading: a specific phrase drawn from the business's story, not a generic label.**
 How the owner found Honeycomb and what made sense about it. The turn should feel earned, not sales-y. Good framing: the owner had customers who kept asking how to support the business; Honeycomb turned those supporters into investors. The mechanism — a fixed-rate, fixed-term community-funded loan, no equity given up, repaid to the community that funded it — should come through in plain language, not as a list of features.
 
 **This is also where the counterfactual carries the most weight.** Name the alternative the business chose against — the bank loan whose personal-guarantee clause would have put the owner's house on the table, the equity round that would have permanently traded ownership for capital, the wait the owner couldn't afford. The reader should feel the cost of *not* having Honeycomb available, not just the upside of having it.
 
+**Specificity matters here.** "A traditional small-business loan was not the right fit" is a generic phrase that could appear in any case study. Push for at least one concrete, business-specific reason the alternative didn't work — drawn from the input. If the input genuinely doesn't say (some don't), say that: "the owner didn't name a specific bank, but the structural mismatch was clear from the [businessType] and the early-stage [revenue/inventory] profile." Vague counterfactuals carry no weight; they're a label, not an argument.
+
 **Beat 4 — The raise and the community (approx. 250 words). `<h2>` heading.**
 The concrete numbers: amount raised, number of investors, goal, percent of goal, time to fund. Draw at least one detail about *who* the investors were — regulars, longtime customers, neighbors, family friends, other local business owners — if the input supports this. If it doesn't, say what the number represents at human scale ("117 neighbors," not "117 investors" where you can help it). Show the shape of the campaign, not a spreadsheet.
 
 *Adapt the community vocabulary to the business.* The "neighbors / regulars / walk up to the table" framing fits consumer-facing retail and food. For B2B, professional services, or manufacturing, use the vocabulary that matches the actual customer base: clients, longtime accounts, referral partners, other local business owners, industry peers. Do not force "neighbors" language onto a bookkeeping firm or an HVAC contractor.
+
+**Address the funding outcome explicitly.** Reg CF is all-or-nothing above the campaign's funding minimum, and the discerning reader knows that. Do not let `percentOfGoal` go unremarked when it is below 100%:
+
+- **`percentOfGoal` ≥ 100%:** "closed at X% of a $Y goal" is enough; no explanation needed.
+- **`percentOfGoal` 75–99% (the partial-but-funded band):** explicitly state that the campaign cleared its funding minimum. Phrase it factually: "The raise closed at $46,841 — short of the $50,000 ceiling, but past the funding minimum that lets a Honeycomb loan close." If the input doesn't specify the minimum, write "past the funding minimum the loan needed to close" without inventing a number.
+- **`percentOfGoal` < 75%:** treat carefully — this case is rare on funded campaigns and usually means the input field is wrong; surface the discrepancy in the operational notes Claude returns rather than papering over it.
+
+The reader will notice if you skip past a 94% number without explaining it. Better to address it in one factual sentence and move on.
 
 **Beat 5 — What the money did (approx. 200 words). No heading needed, unless the story naturally calls for it.**
 What the funds went toward, drawn from `useOfProceeds`. What the business is doing now that it could not do before. End on a human note, not a CTA — the in-page CTA blocks do the action-driving. The last line should land on the business or its community, not on Honeycomb.
@@ -404,6 +423,77 @@ whose books read like a young CPG brand's books.
 <why_good>A specific image with a specific claim. Earns the space.</why_good>
 </rule>
 
+<rule id="ground-the-claim">
+<description>
+The community-as-asset claim is the single strongest theoretical advantage of
+community-funded debt over a bank loan: the investors are also customers, and
+they have a financial reason to advocate, demo, and check shelf placement. It
+is the proof point Honeycomb's whole model rests on.
+
+Asserting this claim is easy. Showing it is harder, and it is what separates a
+case study that converts a prospective borrower from one that doesn't.
+
+Where the input supports it, ground every community-as-asset claim in a
+specific detail: an investor archetype the campaign actually attracted, a
+verbatim line from the campaign comments, a known demo that already happened,
+a retail account that came through an investor introduction.
+
+Where the input does NOT support a specific detail (the most common case for
+recently-closed campaigns), do not assert the claim as a past-tense outcome.
+Frame it as the *expected* mechanism — what the structure makes possible —
+rather than what already occurred.
+</description>
+
+<bad>
+Sixty-seven people now have a financial reason to bring a friend to the next
+demo, to ask their local grocer to stock the line, and to keep an eye on
+whether the sauce is on the shelf where they expect to find it.
+</bad>
+<why_bad>Asserts past-tense advocacy with no input support. The reader cannot
+distinguish this from a generic claim that would apply to any campaign.</why_bad>
+
+<good>
+The structure is the bet: sixty-seven investors who already cook with the sauce
+are now sixty-seven households with a small financial reason to ask their local
+grocer to stock the line. Whether that bet plays out is the next twelve months
+of the business.
+</good>
+<why_good>Same observation, framed as the mechanism the structure creates and
+the open question the business is now living with — not a claimed outcome.</why_good>
+</rule>
+
+<rule id="skim-path">
+<description>
+Most case-study readers don't read linearly. They land on the page, scan the
+H1, glance at the metric strip, then skim — eyes landing on subheads, on
+pull-quote-shaped sentences, on visual stops. A page with monolithic
+3-to-5-sentence paragraph blocks and no visual stress beats reads as a wall
+the eye cannot navigate.
+
+Required affordances in the `story` body:
+
+- **2–3 `<strong>`-bolded key sentences** across the body, distributed roughly
+  one per major beat. Each bolded sentence must carry a complete idea —
+  bolding is for the reader's skim, not for emphasis on a phrase fragment.
+  Bold the sentence that, if a designer pulled it out as a callout, would
+  still earn the space (the same diagnostic as pull-quote-density).
+- **Single-sentence paragraphs** in at least one place — the rhythm rule
+  already requires this, and it doubles as a skim affordance: the eye
+  registers it as a stress beat without any other markup.
+
+Do not over-bold. More than 3 `<strong>` sentences in a 1,000-word body and
+the affordance loses force; everything-bolded-is-nothing-bolded.
+</description>
+
+<good>
+<strong>The raise closed at $46,841 — short of the $50,000 ceiling, but past
+the funding minimum that lets a Honeycomb loan close.</strong>
+</good>
+<why_good>The single most important factual sentence in Beat 4. Bolding it
+gives a skimmer the answer to "did this actually fund?" without reading the
+surrounding paragraph.</why_good>
+</rule>
+
 ---
 
 
@@ -419,13 +509,21 @@ These four fields together form the page's visual and semantic opening. They ren
 
 The reader should want to read the piece *because of the headline*. A headline the piece could be filed under without anyone learning anything new is doing labeling work, not editorial work.
 
-Lead with the business name or the most concrete outcome. Include one specific anchor: the investor count ("117 neighbors"), a location ("Brooklyn"), a niche ("bone broth shop"), or a dollar figure. One anchor is enough — piling on gets cluttered.
+**Forbidden shapes — these are pure labeling, regardless of how accurate they are:**
+
+- *Dollar-number-led summary:* `Brothmonger raised $100K to open a Brooklyn bone broth shop` — the dollar figure tells the reader the page exists; it does not tell them anything they couldn't have inferred from a directory listing. **The dollar figure goes in the metric strip and the meta description, not the H1.**
+- *Generic-outcome summary:* `The Saucy African raised $46K to bring West African flavors to American kitchens` — the H1 should not be a paraphrase of the meta description.
+- *Colon-then-abstract-noun:* `Brothmonger: A Story of Community Investment and Growth` — the abstract noun is a label, not a hook.
+
+**Lead with the mechanism or the angle that makes this story different from the next case study on the index page.** The strongest H1s name the unusual thing the reader will only learn by reading: the customers-becoming-investors conversion, the time-to-close, the equity the founder didn't have to give up, the specific moment the bank said no. The dollar figure is rarely the unusual thing — it sits in the metric strip and the meta description without help.
 
 - Good (tension): `Brothmonger nearly took a bank loan against the house — then the regulars stepped in`
-- Good (specific claim): `How 117 neighbors helped Brothmonger open its first kitchen`
-- Good (particular quality): `The Brooklyn bone broth shop that didn't have to give up equity to grow`
-- Inert (labeling-only): `Brothmonger raised $100K to open a Brooklyn bone broth shop` — accurate but tells the reader the contents of the page without giving them a reason to read it.
-- Bad: `Brothmonger: A Story of Community Investment and Growth` (colon-heavy, abstract, no specific anchor)
+- Good (mechanism-led): `How 117 neighbors helped Brothmonger open its first kitchen`
+- Good (mechanism + speed): `How a Chicago brewery raised $114K from its regulars in 30 days`
+- Good (no-equity angle): `The Brooklyn bone broth shop that didn't have to give up equity to grow`
+- Inert (dollar-led labeling): `Brothmonger raised $100K to open a Brooklyn bone broth shop`
+- Inert (generic-outcome labeling): `The Saucy African raised $46K to bring West African flavors to American kitchens`
+- Bad (colon-heavy abstract): `Brothmonger: A Story of Community Investment and Growth`
 
 **`heroSubhead`.** 8–16 words. One sentence that paints a scene or names the stakes. Should not restate the H1's facts — it adds a new concrete beat.
 
