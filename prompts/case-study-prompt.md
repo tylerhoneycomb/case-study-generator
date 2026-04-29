@@ -191,67 +191,221 @@ What the funds went toward, drawn from `useOfProceeds`. What the business is doi
 
 The narrative beats above (Section 6.1–6.5) cover *what* the piece says. This section covers *how* each sentence carries weight. A draft that follows every beat rule but ignores these will read as well-formed and bland.
 
-### Specificity ladder
+Each rule below is a constraint on the generated story body. Examples are drawn from real drafts of this pipeline — the `<bad>` blocks are sentences that have been generated and shipped; the `<good>` blocks are the version that should have been generated instead.
 
-Every claim sits on one of four rungs:
+<rule id="specificity-ladder">
+<description>
+Every claim sits on one of four rungs. Reach as far down as the source payload
+honestly supports and stop there. Do not fabricate to reach a lower rung.
 
-1. **Abstract** — "West African flavors deserve shelf space."
-2. **Categorical** — "simmer sauces and spice blends."
-3. **Specific** — "a peanut-stew base, a tomato-and-Scotch-bonnet sauce built for jollof."
-4. **Sensory** — "the kitchen smells like browned onions and ginger by 9 a.m."
+  Rung 1 — Abstract: a general claim about a category
+  Rung 2 — Categorical: names the product category
+  Rung 3 — Specific: names the product, dish, or detail
+  Rung 4 — Sensory: an image the reader can see, smell, taste, or hear
 
-Reach as far down the ladder as the source payload honestly supports. Stop at the rung below which the next step would require fabrication. **A draft in which fewer than five sentences live on rungs three or four will read as bland regardless of how well-formed the prose is.**
+A draft with fewer than five sentences on rungs 3 or 4 will read as bland
+regardless of how well-formed the prose is.
+</description>
 
-### Earn the next sentence
+<bad>
+West African flavors deserve the same place in the American pantry that Italian
+flavors hold.
+</bad>
+<why_bad>Rung 1. Pure category-level claim. Could appear in any piece about any
+underrepresented cuisine.</why_bad>
 
-Every sentence must give the reader a reason to keep going — a new fact, a turn of phrase, a question raised, a tension introduced. Sentences whose only job is to introduce the next sentence are scaffolding, not content.
+<good>
+Open a jar of The Saucy African simmer sauce on a Tuesday night, pour it over
+chicken thighs already in the pan, and dinner is mostly done.
+</good>
+<why_good>Rung 4. The reader can see the moment. The claim is grounded in a
+specific use case from the source.</why_good>
 
-**Diagnostic:** delete the sentence and let the next one stand on its own. Does the piece get worse? If not, it was filler.
+<fallback>
+If the payload supports only rung 2, write at rung 2 honestly. Do not invent
+sensory detail. A rung-2 sentence written tightly beats a fabricated rung-4
+sentence.
+</fallback>
+</rule>
 
-Common scaffolding patterns to flag:
+<rule id="earn-the-next-sentence">
+<description>
+Every sentence must give the reader a reason to keep going — a new fact, a turn
+of phrase, a question raised, a tension introduced. Sentences whose only job is
+to introduce the next sentence are scaffolding.
+
+Diagnostic: delete the sentence and let the next one stand on its own. Does the
+piece get worse? If not, it was filler.
+</description>
+
+<bad>
+That framing matters because the business is solving a specific problem. African
+food, in the American grocery context, often gets shelved as a specialty
+category.
+</bad>
+<why_bad>Sentence one is pure scaffolding. It tells the reader the next sentence
+matters instead of letting the next sentence land.</why_bad>
+
+<good>
+African food, in the American grocery context, often gets shelved as a specialty
+category.
+</good>
+<why_good>Same content, scaffolding deleted. The point lands directly.</why_good>
+
+<scaffolding_patterns_to_flag>
 - "That framing matters because…"
 - "The goal from the start has been a simple one."
 - "What X means is…"
-- "It is worth noting that…" (also blocked by Section 12.1)
+- "It is worth noting that…"
 - "The work now is the work that was already underway…"
+</scaffolding_patterns_to_flag>
+</rule>
 
-### So-what filter
+<rule id="so-what-filter">
+<description>
+Every paragraph must answer an implicit question the reader is carrying:
+*so what does this mean for me?* The reader is a small business owner weighing
+whether community-funded capital might fit their situation. A paragraph that
+does not connect to a question they are already carrying is filler.
 
-Every paragraph must answer an implicit question the reader is carrying: *so what does this mean for me?* Strong paragraphs leave the reader with a recognition they will take with them — "that's how they handled the inventory problem," "that's what the cap table looks like a year later." Paragraphs that exist because the information is true, but the reader cannot do anything with, are filler.
+The most common offender is the use-of-proceeds beat. Lists like "debt
+consolidation, inventory, marketing, and operations" are true for almost any
+business and so function as filler unless tied to a specific consequence.
+</description>
 
-The most common offender is the use-of-proceeds beat: lists like "debt consolidation, inventory, marketing, and operations" are true for almost any business and so function as filler unless tied to a specific consequence the reader can recognize.
+<bad>
+A portion is going to debt consolidation, freeing up monthly cash flow and
+giving the business a steadier financial base to grow from.
+</bad>
+<why_bad>True. Generic. The reader cannot do anything with this sentence — it
+applies to every loan ever taken.</why_bad>
 
-### Single emotional spine
+<good>
+Debt consolidation lowers the monthly cash burden, which is what lets the
+business say yes to a new chain instead of pacing rollouts one account at a
+time.
+</good>
+<why_good>The same fact, tied to a specific consequence the reader can hold
+onto.</why_good>
+</rule>
 
-The piece commits to one emotional center. Other observations support it but do not compete with it. A strong draft contains a single sentence that, if pulled out, would describe what the piece is really about. A weak draft hedges across multiple competing centers — market argument, financing argument, community argument, use-of-proceeds report — and gives each equal weight.
+<rule id="single-emotional-spine">
+<description>
+The piece commits to one emotional center. Other observations support it but do
+not compete with it. A strong draft contains a single sentence that, if pulled
+out, would describe what the piece is really about. A weak draft hedges across
+multiple competing centers — the market argument, the financing argument, the
+community argument, the use-of-proceeds report — and gives each equal weight.
 
-When the strongest single observation in the draft is buried mid-piece and weighted the same as filler around it, the piece has no spine. Find that observation; build the piece around it.
+Before drafting beats 2–5, identify the strongest single observation in the
+input payload and weight the rest of the piece in support of it.
+</description>
+</rule>
 
-### Inverted pyramid within each beat
+<rule id="inverted-pyramid">
+<description>
+The most compelling sentence in a section goes first. Supporting detail trails
+behind. A reader skimming first sentences of each paragraph should pick up the
+meaning of the piece.
+</description>
 
-The most compelling sentence in each beat goes first. Supporting detail trails behind. A reader skimming only the first sentences of each paragraph should pick up the meaning of the piece. Beat openings that exist only to introduce the actual point are scaffolding and should be deleted in favor of leading with the point.
+<bad>
+The campaign also matched how a CPG brand actually grows. People who try the
+sauce and like it tend to tell other people. Some of those people end up at a
+tasting demo. Turning that same audience into investors meant the people most
+likely to advocate for the brand now had a direct stake in seeing it succeed.
+</bad>
+<why_bad>The strongest sentence is last. The opening is throat-clearing.</why_bad>
 
-### Rhythm variation
+<good>
+Turning the people most likely to advocate for the brand into investors gave
+them a direct stake in seeing it succeed. People who try the sauce and like it
+tend to tell other people. Some of those people end up at a tasting demo.
+</good>
+<why_good>Strongest sentence first. The reader gets the point on sentence
+one.</why_good>
+</rule>
 
-**Sentence length.** Mix short (3–6 words), medium (10–18 words), and occasional long (25+ words) sentences. A draft in which every sentence falls within a six-word range of every other sentence will read as flat regardless of content. **At least three sentences in an 800–1,200 word body should be under 8 words.**
+<rule id="rhythm-variation">
+<description>
+Sentence and paragraph length must vary across the piece. Uniform rhythm reads
+as flat regardless of content.
 
-**Paragraph length.** Vary deliberately. **At least one paragraph in the body should be a single sentence or single observation set off on its own.** Uniform paragraph blocks of three-to-five sentences each create a wall the eye cannot navigate.
+Sentence requirements for an 800–1,200 word body:
+- At least 3 sentences under 8 words
+- At least 1 sentence over 25 words
+- Most sentences in the 10–18 word band
 
-Length variation is the lever that compensates for the cadence flatness that the em-dash cap and tricolon cap (Section 12.4) inevitably create. **Variation in length, not punctuation, is what should carry the rhythm.**
+Paragraph requirements:
+- At least 1 paragraph that is a single sentence
+- Paragraph lengths must visibly vary (not all 3–5 sentence blocks)
 
-### Voice — the Wikipedia test
+Length variation is the lever that compensates for cadence flatness from the
+em-dash cap and tricolon cap. Variation in sentence length, not punctuation,
+is what carries the rhythm.
+</description>
 
-Could a paragraph appear, without modification, in a Wikipedia entry about the company? If yes, it has the voice of neutral exposition rather than editorial. Strong case studies have a writer's voice — observations that show someone was thinking, sentences a fact-aggregating algorithm wouldn't produce. Voice is not produced by adding adjectives; it is produced by making an observation that is both true and not obvious.
+<good_paragraph_break>
+The campaign closed on January 29, 2026 with $46,841 raised from 67 investors
+against a $50,000 goal.
+</good_paragraph_break>
+<why_good>A single fact, dense enough to stand alone. Set off as a one-sentence
+paragraph, it lands as a stress beat the eye registers as a pause.</why_good>
+</rule>
 
-The four sections most prone to passing the Wikipedia test, and most worth checking against it: the product description, the financing rationale, the use-of-proceeds beat, and the closing.
+<rule id="wikipedia-test">
+<description>
+Could a paragraph appear, without modification, in a Wikipedia entry about the
+company? If yes, it has the voice of neutral exposition rather than editorial.
+Voice is not produced by adding adjectives. Voice is produced by making an
+observation that is both true and not obvious.
 
-### Pull-quote density
+The four sections most prone to passing the Wikipedia test, and most worth
+checking against it: the product description, the financing rationale, the
+use-of-proceeds beat, and the closing.
+</description>
 
-A long-form piece must contain at least one sentence per 300–400 words that has enough independent force to work as a pull quote — a sentence with a real claim, a real image, or a real turn of phrase. **An 800–1,200 word body should have three to five such peaks.** Weak drafts have zero or one; the reader finishes and could not name a single line.
+<bad>
+The Saucy African is a consumer packaged goods brand. The line covers
+slow-cooked simmer sauces and spice blends rooted in West African culinary
+traditions.
+</bad>
+<why_bad>Could appear verbatim in a Wikipedia article. No observation is being
+made — only category labels are being applied.</why_bad>
 
-**Diagnostic during drafting:** which sentence in this section, if a designer set it in 24-point type, would still earn the space?
+<good>
+A traditional small-business loan was not the right fit for a young CPG brand
+whose books read like a young CPG brand's books.
+</good>
+<why_good>Contains an observation a Wikipedia article would not make. The
+self-referential phrasing is the writer thinking on the page.</why_good>
+</rule>
+
+<rule id="pull-quote-density">
+<description>
+A long-form piece must contain at least one sentence per 300–400 words with
+enough independent force to work as a pull quote — a sentence with a real claim,
+a real image, or a real turn of phrase. An 800–1,200 word body must have at
+least three such sentences.
+
+Diagnostic during drafting: which sentence in this section, if a designer set
+it in 24-point type, would still earn the space?
+</description>
+
+<good>
+That kind of advocacy is hard to buy and easy to underestimate.
+</good>
+<why_good>A claim with edge. Could stand alone in 24-point type.</why_good>
+
+<good>
+A traditional small-business loan was not the right fit for a young CPG brand
+whose books read like a young CPG brand's books.
+</good>
+<why_good>A specific image with a specific claim. Earns the space.</why_good>
+</rule>
 
 ---
+
 
 ## 7. Hero section rules — `h1Heading`, `heroSubhead`, `heroImageAlt`, `storyHeading`
 
@@ -504,19 +658,27 @@ The first sentence of `story` must not begin with any of: `In today's`, `In the 
 
 ### 12.7 Pre-output blandness check
 
-Before returning the JSON, run this four-point check on the `story` body. If the draft fails on any point, revise that pass before output. This is a draft-time check at the same shape as the blocked-phrase scan — apply it last, after the beats are in place and the validators in 12.1–12.6 are clean.
+Before returning the JSON, run this five-point check on the `story` body. If the draft fails on any point, revise and re-check before output.
 
-**1. Generality.** Does the draft make abstract claims where the source payload supports more specific ones? Each general claim that could resolve to something concrete from the input is a missed lever — resolve it. (See the specificity ladder in Section 6.7.) Default ladder targets: at least five sentences on rungs 3–4 (specific or sensory) across the body.
+<check id="1-specificity">
+Count sentences on rungs 3 or 4 of the specificity ladder (rule "specificity-ladder" in Section 6.7). If fewer than 5 in an 800–1,200 word body, identify which abstract claims could resolve to something concrete from the input payload and rewrite them. If the payload does not support more specificity, tighten the abstract sentences instead of inflating them with unsupported detail.
+</check>
 
-**2. Even cadence.** Do most sentences fall within a six-word range of each other? Do all paragraphs have similar density? If yes, introduce length variation per Section 6.7 — at least three sentences under 8 words and at least one single-sentence paragraph somewhere in the body. Length variation, not punctuation, carries the rhythm.
+<check id="2-rhythm">
+Count sentences under 8 words. If fewer than 3, introduce length variation. Confirm at least one paragraph is a single sentence. Confirm paragraph lengths visibly vary.
+</check>
 
-**3. Sentence-level risk.** Is there at least one sentence that takes a small risk — an unexpected metaphor, an editorial observation, a turn of phrase that might land oddly? A draft with zero risk reads as risk-averse, and risk-averse reads as bland. The Wikipedia test (Section 6.7) is the inverse of this check.
+<check id="3-scaffolding">
+Scan for scaffolding patterns from rule "earn-the-next-sentence" in Section 6.7. Delete any sentence that exists only to introduce the next one.
+</check>
 
-**4. Earned editorializing.** Where the draft adds voice, does it ground that voice in concrete images rather than adjective-stacking?
-- Unearned: "None of that is glamorous." (adjective-stacking; the reader has to take your word for it)
-- Earned: "It is sample shipments and onboarding paperwork and replying to a buyer's question about case-pack sizes at 11 p.m." (the same observation grounded in images; the reader sees what you mean)
+<check id="4-wikipedia">
+Read each paragraph and ask: could this appear verbatim in a Wikipedia article? If yes for more than one paragraph, the piece has too much neutral exposition. Replace adjective-stacking with concrete observations.
+</check>
 
-Replace adjective-stacking with images. If you can't ground the voice in something concrete from the input, cut the editorializing rather than reach for adjectives.
+<check id="5-pull-quote">
+Identify the three sentences in the body that would work as pull quotes. If fewer than three exist, the piece has no peaks and will read as flat. Rewrite the strongest candidate sentences in each section to land harder.
+</check>
 
 ---
 
