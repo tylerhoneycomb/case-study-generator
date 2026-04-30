@@ -113,7 +113,9 @@ const caseStudy = defineCollection({
       // CTA
       // ---------------------------------------------------------------------
       ctaText: z.string().min(3),
-      ctaUrl: z.string().url().default('https://honeycombcredit.com/pre-qualify'),
+      // ctaUrl removed in v4.0.x — the pre-qualify URL is a constant on the
+      // page surface (see src/components/Cta.astro). Each render builds the
+      // UTM-tagged href from a constant base + the campaignSlug.
 
       // ---------------------------------------------------------------------
       // Source traceability — the Honeycomb campaign that produced this page

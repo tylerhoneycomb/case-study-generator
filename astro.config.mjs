@@ -15,7 +15,11 @@ export default defineConfig({
   },
   integrations: [
     mdx(),
-    sitemap(),
+    sitemap({
+      // /admin is the operator portal; never index, never include in sitemap.
+      // The page itself also carries <meta name="robots" content="noindex">.
+      filter: (page) => !page.includes('/admin'),
+    }),
     tailwind({ applyBaseStyles: false }),
   ],
 });

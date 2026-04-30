@@ -1,0 +1,348 @@
+---
+// =============================================================================
+// /admin — operator portal for the Collateral Development Agent v4.0.
+//
+// Static page on GitHub Pages. No backend; the browser uses a GitHub PAT
+// (stored in localStorage on first visit) to call the GitHub API directly.
+// Each action opens a tracking issue and posts the matching /funded slash
+// command as the first comment — the existing on-comment.yml workflow does
+// the rest. Status flows back into the same issue, and the portal links you
+// straight to it.
+//
+// Authorization model: PAT scoped to issues:write on the repo. Comments
+// posted by the PAT carry your `author_association == OWNER`, which passes
+// the on-comment workflow's auth filter.
+//
+// Excluded from sitemap (astro.config.mjs filter) and noindex (BaseHead).
+// =============================================================================
+
+import { getCollection } from 'astro:content';
+import BaseHead from '~/components/BaseHead.astro';
+import SiteHeader from '~/components/SiteHeader.astro';
+import SiteFooter from '~/components/SiteFooter.astro';
+
+// Build-time list of existing case studies for the redraft/delete dropdowns.
+const studies = (await getCollection('case-studies'))
+  .map((entry) => ({
+    slug: entry.slug,
+    businessName: entry.data.businessName,
+    campaignSlug: entry.data.campaignSlug,
+    publishedDate: entry.data.publishedDate.toISOString().slice(0, 10),
+  }))
+  .sort((a, b) => b.publishedDate.localeCompare(a.publishedDate));
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead
+      title="Operator portal — funded.honeycombcredit.com"
+      description="Operator portal."
+      noindex={true}
+    />
+    <style>
+      .panel { @apply bg-honeycomb-cream border border-honeycomb-ink/15 p-6; }
+      .label { @apply block font-sans text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-ink/70 mb-2; }
+      .input, .textarea, .select {
+        @apply w-full bg-white border border-honeycomb-ink/30 px-3 py-2 font-sans text-sm
+          focus:outline-none focus:border-honeycomb-purple;
+      }
+      .textarea { @apply font-mono; min-height: 120px; }
+      .btn {
+        @apply inline-flex items-center bg-honeycomb-purple px-5 py-2.5
+          font-sans text-sm font-bold uppercase tracking-wider text-white
+          no-underline hover:bg-honeycomb-ink cursor-pointer
+          disabled:opacity-50 disabled:cursor-not-allowed;
+      }
+      .btn-secondary {
+        @apply inline-flex items-center bg-transparent px-5 py-2.5
+          font-sans text-sm font-bold uppercase tracking-wider text-honeycomb-ink
+          no-underline border border-honeycomb-ink hover:bg-honeycomb-ink hover:text-honeycomb-cream cursor-pointer;
+      }
+      .danger { @apply bg-red-700 hover:bg-red-900; }
+      .status-ok    { @apply text-honeycomb-green; }
+      .status-err   { @apply text-red-700; }
+      .status-info  { @apply text-honeycomb-purple; }
+    </style>
+  </head>
+  <body class="font-sans">
+    <SiteHeader />
+    <main class="mx-auto max-w-5xl px-6 py-12">
+
+      <!-- ============================================================ -->
+      <!-- Auth gate — shown until a PAT is in localStorage              -->
+      <!-- ============================================================ -->
+      <section id="auth-gate" class="hidden">
+        <h1 class="font-display text-4xl">Operator portal</h1>
+        <p class="mt-3 text-lg text-honeycomb-ink/80">One-time setup. Paste a fine-grained GitHub PAT scoped to <code class="bg-honeycomb-cream px-1">issues:write</code> on this repo. Stored in your browser only — never sent anywhere except api.github.com.</p>
+        <p class="mt-2 text-sm text-honeycomb-ink/70">
+          <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Create a fine-grained PAT →</a>
+          (Resource owner: <code>tylerhoneycomb</code>; Repository access: only <code>case-study-generator</code>; Permissions: Issues → Read and write.)
+        </p>
+        <div class="mt-6 panel max-w-2xl">
+          <label class="label" for="pat-input">GitHub PAT</label>
+          <input id="pat-input" class="input" type="password" autocomplete="off" placeholder="github_pat_..." />
+          <button id="pat-save" class="btn mt-4" type="button">Save and continue</button>
+          <p id="pat-error" class="mt-3 text-sm status-err hidden"></p>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- Main portal — shown after PAT is set                          -->
+      <!-- ============================================================ -->
+      <section id="portal" class="hidden">
+        <header class="flex items-baseline justify-between">
+          <div>
+            <h1 class="font-display text-4xl">Operator portal</h1>
+            <p class="mt-2 text-honeycomb-ink/70">Submit, redraft, delete, or inspect case studies. Each action opens a tracking issue with full status comments.</p>
+          </div>
+          <button id="logout" class="btn-secondary text-xs">Forget PAT</button>
+        </header>
+
+        <!-- Action grid -->
+        <div class="mt-8 grid gap-6 lg:grid-cols-2">
+
+          <!-- Generate -->
+          <div class="panel">
+            <h2 class="font-display text-2xl">Generate</h2>
+            <p class="mt-1 text-sm text-honeycomb-ink/70">Create a new case study from a Honeycomb campaign slug. Costs ~$0.45 in Anthropic spend.</p>
+            <form data-action="generate" class="mt-4 space-y-3">
+              <label class="label" for="generate-slug">Honeycomb campaign slug</label>
+              <input id="generate-slug" name="slug" class="input" required pattern="[A-Za-z0-9_\-]+" placeholder="The-Saucy-African" />
+              <p class="text-xs text-honeycomb-ink/60">Find this at the end of <code>invest.honeycombcredit.com/campaigns/<strong>&lt;slug&gt;</strong></code>. Case-sensitive.</p>
+              <button class="btn" type="submit">Generate</button>
+              <p data-status class="text-sm hidden"></p>
+            </form>
+          </div>
+
+          <!-- Redraft -->
+          <div class="panel">
+            <h2 class="font-display text-2xl">Redraft</h2>
+            <p class="mt-1 text-sm text-honeycomb-ink/70">Regenerate an existing case study with feedback. Same URL, new content. ~$0.45 spend.</p>
+            <form data-action="redraft" class="mt-4 space-y-3">
+              <label class="label" for="redraft-slug">Case study</label>
+              <select id="redraft-slug" name="slug" class="select" required>
+                <option value="">Pick a case study…</option>
+                {studies.map((s) => (
+                  <option value={s.slug}>{s.businessName} — /{s.slug}</option>
+                ))}
+              </select>
+              <label class="label mt-3" for="redraft-feedback">Feedback (optional but strongly recommended)</label>
+              <textarea id="redraft-feedback" name="feedback" class="textarea" placeholder="e.g. Cut the 3 stacked tricolons in the use-of-funds paragraph. Lead with the no-equity angle. Add a partial-funding sentence in Beat 4."></textarea>
+              <p class="text-xs text-honeycomb-ink/60">Without feedback the redraft is just a re-roll. Specific feedback (named patterns, named paragraphs) steers Claude meaningfully.</p>
+              <button class="btn" type="submit">Redraft</button>
+              <p data-status class="text-sm hidden"></p>
+            </form>
+          </div>
+
+          <!-- Delete -->
+          <div class="panel">
+            <h2 class="font-display text-2xl">Delete</h2>
+            <p class="mt-1 text-sm text-honeycomb-ink/70">Remove a case study. Reversible via <code>git revert</code>; the deletion commit goes through main.</p>
+            <form data-action="delete" class="mt-4 space-y-3">
+              <label class="label" for="delete-slug">Case study</label>
+              <select id="delete-slug" name="slug" class="select" required>
+                <option value="">Pick a case study…</option>
+                {studies.map((s) => (
+                  <option value={s.slug}>{s.businessName} — /{s.slug}</option>
+                ))}
+              </select>
+              <label class="flex items-center gap-2 mt-3 text-sm">
+                <input type="checkbox" name="confirm" required />
+                I understand this removes the page from the live site.
+              </label>
+              <button class="btn danger" type="submit">Delete</button>
+              <p data-status class="text-sm hidden"></p>
+            </form>
+          </div>
+
+          <!-- Inspect -->
+          <div class="panel">
+            <h2 class="font-display text-2xl">Inspect</h2>
+            <p class="mt-1 text-sm text-honeycomb-ink/70">Diagnostic. Fetches a campaign's __NEXT_DATA__ and prints structure. No spend, no commit.</p>
+            <form data-action="inspect" class="mt-4 space-y-3">
+              <label class="label" for="inspect-slug">Honeycomb campaign slug</label>
+              <input id="inspect-slug" name="slug" class="input" required pattern="[A-Za-z0-9_\-]+" placeholder="The-Saucy-African" />
+              <button class="btn-secondary" type="submit">Inspect</button>
+              <p data-status class="text-sm hidden"></p>
+            </form>
+          </div>
+
+        </div>
+
+        <!-- Recent case studies -->
+        <section class="mt-12">
+          <h2 class="font-display text-2xl">Live case studies</h2>
+          {studies.length === 0 ? (
+            <p class="mt-3 text-honeycomb-ink/70">No case studies published yet.</p>
+          ) : (
+            <ul class="mt-4 divide-y divide-honeycomb-ink/10 border border-honeycomb-ink/15 bg-white">
+              {studies.map((s) => (
+                <li class="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                  <span class="flex-1 font-semibold">{s.businessName}</span>
+                  <span class="font-mono text-xs text-honeycomb-ink/60">/{s.slug}</span>
+                  <span class="font-mono text-xs text-honeycomb-ink/60">{s.publishedDate}</span>
+                  <a href={`/${s.slug}`} class="text-honeycomb-purple text-xs uppercase tracking-wider font-bold no-underline hover:underline">View →</a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+      </section>
+    </main>
+    <SiteFooter />
+
+    <script is:inline define:vars={{ studies }}>
+      // ----------------------------------------------------------------
+      // Portal client. Holds the PAT in localStorage; dispatches actions
+      // by opening a GitHub issue and posting a /funded ... comment.
+      // ----------------------------------------------------------------
+      const REPO = 'tylerhoneycomb/case-study-generator';
+      const API = 'https://api.github.com';
+      const PAT_KEY = 'funded_admin_pat';
+
+      const $ = (sel) => document.querySelector(sel);
+      const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+      const authGate = $('#auth-gate');
+      const portal = $('#portal');
+
+      function getPAT() { return localStorage.getItem(PAT_KEY); }
+      function setPAT(t) { localStorage.setItem(PAT_KEY, t); }
+      function clearPAT() { localStorage.removeItem(PAT_KEY); }
+
+      function show(view) {
+        if (view === 'auth') {
+          authGate.classList.remove('hidden');
+          portal.classList.add('hidden');
+        } else {
+          authGate.classList.add('hidden');
+          portal.classList.remove('hidden');
+        }
+      }
+
+      // ---- Auth gate ----
+      $('#pat-save').addEventListener('click', async () => {
+        const input = $('#pat-input');
+        const err = $('#pat-error');
+        err.classList.add('hidden');
+        const value = input.value.trim();
+        if (!value.startsWith('github_pat_') && !value.startsWith('ghp_')) {
+          err.textContent = "That doesn't look like a GitHub PAT (should start with github_pat_ or ghp_).";
+          err.classList.remove('hidden');
+          return;
+        }
+        // Verify by hitting /user
+        try {
+          const res = await fetch(`${API}/user`, { headers: ghHeaders(value) });
+          if (!res.ok) throw new Error(`PAT check failed: ${res.status} ${res.statusText}`);
+          const me = await res.json();
+          if (!me.login) throw new Error('PAT did not return a user.');
+          setPAT(value);
+          show('portal');
+        } catch (e) {
+          err.textContent = e.message;
+          err.classList.remove('hidden');
+        }
+      });
+
+      $('#logout').addEventListener('click', () => {
+        if (!confirm('Forget the stored PAT? Re-enter on next use.')) return;
+        clearPAT();
+        show('auth');
+      });
+
+      function ghHeaders(pat) {
+        return {
+          'Authorization': `Bearer ${pat || getPAT()}`,
+          'Accept': 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json',
+        };
+      }
+
+      // ---- Action dispatch ----
+      // Each action opens a fresh tracking issue, then posts the
+      // matching /funded slash command as the first comment.
+      const ACTION_TITLES = {
+        generate: (slug) => `🐝 Manual generate: ${slug}`,
+        redraft:  (slug) => `🐝 Manual redraft: ${slug}`,
+        delete:   (slug) => `🐝 Manual delete: ${slug}`,
+        inspect:  (slug) => `🔍 Inspect: ${slug}`,
+      };
+
+      const ACTION_BODIES = {
+        generate: (slug) => `Generate a case study for Honeycomb campaign \`${slug}\`. Submitted via /admin portal.`,
+        redraft:  (slug, fb) => `Redraft \`${slug}\`${fb ? ' with feedback below.' : ' (no feedback).'}\n\n${fb ? `**Feedback:**\n\n${fb}` : ''}`,
+        delete:   (slug) => `Delete \`${slug}\`. Submitted via /admin portal.`,
+        inspect:  (slug) => `Diagnostic inspect of Honeycomb campaign \`${slug}\`. Submitted via /admin portal.`,
+      };
+
+      function buildSlashCommand(action, slug, feedback) {
+        if (action === 'redraft' && feedback) {
+          return `/funded redraft ${slug} ${feedback.replace(/\n/g, ' ')}`;
+        }
+        return `/funded ${action} ${slug}`;
+      }
+
+      function setStatus(form, msg, kind) {
+        const el = form.querySelector('[data-status]');
+        el.className = `text-sm ${kind === 'err' ? 'status-err' : kind === 'ok' ? 'status-ok' : 'status-info'}`;
+        el.innerHTML = msg;
+      }
+
+      async function dispatch(action, fields, form) {
+        const slug = fields.slug.trim();
+        const feedback = (fields.feedback || '').trim();
+        if (!slug) throw new Error('Slug is required.');
+
+        setStatus(form, 'Opening tracking issue…', 'info');
+        const issueRes = await fetch(`${API}/repos/${REPO}/issues`, {
+          method: 'POST',
+          headers: ghHeaders(),
+          body: JSON.stringify({
+            title: ACTION_TITLES[action](slug),
+            body: ACTION_BODIES[action](slug, feedback),
+            labels: ['admin-portal'],
+          }),
+        });
+        if (!issueRes.ok) throw new Error(`Issue create failed: ${issueRes.status} ${await issueRes.text()}`);
+        const issue = await issueRes.json();
+
+        setStatus(form, `Issue #${issue.number} opened. Posting slash command…`, 'info');
+        const cmd = buildSlashCommand(action, slug, feedback);
+        const commentRes = await fetch(`${API}/repos/${REPO}/issues/${issue.number}/comments`, {
+          method: 'POST',
+          headers: ghHeaders(),
+          body: JSON.stringify({ body: cmd }),
+        });
+        if (!commentRes.ok) throw new Error(`Comment post failed: ${commentRes.status} ${await commentRes.text()}`);
+
+        setStatus(
+          form,
+          `✅ Dispatched. Watch progress on <a href="${issue.html_url}" target="_blank" class="underline font-bold">issue #${issue.number} →</a>`,
+          'ok',
+        );
+      }
+
+      $$('form[data-action]').forEach((form) => {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const action = form.dataset.action;
+          const fields = Object.fromEntries(new FormData(form).entries());
+          form.querySelector('button[type="submit"]').disabled = true;
+          try {
+            await dispatch(action, fields, form);
+          } catch (err) {
+            setStatus(form, `❌ ${err.message}`, 'err');
+          } finally {
+            form.querySelector('button[type="submit"]').disabled = false;
+          }
+        });
+      });
+
+      // ---- Boot ----
+      if (getPAT()) show('portal');
+      else show('auth');
+    </script>
+  </body>
+</html>

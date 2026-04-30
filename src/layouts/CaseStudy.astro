@@ -67,7 +67,7 @@ const ogImageUrl = new URL(ogPath, siteOrigin).toString();
 
       {d.quote && <Quote quote={d.quote} attribution={d.quoteAttribution} />}
 
-      <Cta ctaText={d.ctaText} ctaUrl={d.ctaUrl} campaignUrl={d.campaignUrl} />
+      <Cta ctaText={d.ctaText} campaignSlug={d.campaignSlug} campaignUrl={d.campaignUrl} />
 
       <footer class="mx-auto max-w-5xl px-6 mt-16">
         <p class="font-sans text-xs uppercase tracking-[0.18em] text-honeycomb-ink/60">

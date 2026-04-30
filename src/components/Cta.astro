@@ -1,11 +1,41 @@
 ---
+// Single-purpose CTA — business-owner recruitment. Per the v4.0 brief and
+// Tyler's clarification, there is no investor CTA on these pages; the
+// "See the original campaign" link below is just a citation of the source,
+// not a conversion target.
+//
+// The pre-qualify URL is a constant on this page surface, not a frontmatter
+// field. The agent has nothing to decide about where the CTA points; the
+// only per-case-study variation is the UTM `utm_content` value, which is
+// the Honeycomb campaign slug — that's how inbound prospects get attributed
+// back to which case study sent them.
+//
+// UTM template:
+//   https://start.honeycomb.credit/?utm_source=case_study
+//                                   &utm_medium=website
+//                                   &utm_campaign=success_stories
+//                                   &utm_content=<campaignSlug>
+
+const PRE_QUALIFY_BASE = 'https://start.honeycomb.credit/';
+
 interface Props {
   ctaText: string;
-  ctaUrl: string;
+  campaignSlug: string;
   campaignUrl: string;
 }
 
-const { ctaText, ctaUrl, campaignUrl } = Astro.props;
+const { ctaText, campaignSlug, campaignUrl } = Astro.props;
+
+function buildPreQualifyHref(slug: string): string {
+  const url = new URL(PRE_QUALIFY_BASE);
+  url.searchParams.set('utm_source', 'case_study');
+  url.searchParams.set('utm_medium', 'website');
+  url.searchParams.set('utm_campaign', 'success_stories');
+  url.searchParams.set('utm_content', slug);
+  return url.toString();
+}
+
+const ctaHref = buildPreQualifyHref(campaignSlug);
 ---
 <section class="mx-auto max-w-5xl px-6 mt-16">
   <div class="grid gap-0 border border-honeycomb-ink/80 sm:grid-cols-[2fr_3fr]">
@@ -25,7 +55,7 @@ const { ctaText, ctaUrl, campaignUrl } = Astro.props;
       </p>
       <div class="mt-6 flex flex-wrap gap-3">
         <a
-          href={ctaUrl}
+          href={ctaHref}
           class="inline-flex items-center bg-honeycomb-purple px-6 py-3 font-sans text-sm font-bold uppercase tracking-wider text-white no-underline hover:bg-honeycomb-ink"
         >
           {ctaText}
