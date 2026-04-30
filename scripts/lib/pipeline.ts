@@ -211,7 +211,8 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     ogTitle: claude.output.ogTitle,
     ogDescription: claude.output.ogDescription,
     ctaText: claude.output.ctaText,
-    ctaUrl: 'https://honeycombcredit.com/pre-qualify',
+    // ctaUrl is no longer in frontmatter — Cta.astro constructs the
+    // UTM-tagged pre-qualify href from a constant base + campaignSlug.
     campaignUrl: buildCampaignUrl(campaign.slug),
     campaignId: campaign.campaignId,
     campaignSlug: campaign.slug,
