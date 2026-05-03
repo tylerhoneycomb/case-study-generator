@@ -1,21 +1,39 @@
 name: On Issue
 # Routes Issue Form submissions (Backfill, Redraft with feedback) to the
-# matching CLI. Each form auto-applies a `form: <name>` label; the dispatcher
-# routes on the label.
+# matching CLI.
+#
+# Routing key: title prefix (`[Backfill]` / `[Redraft]`). Robust against the
+# silent-label-drop GitHub does when an Issue Form's `labels:` list contains
+# labels that don't yet exist in the repo. Title prefixes are part of the
+# template itself and can't be dropped.
+#
+# Trigger types: opened (first submission), edited (operator fixed something),
+# labeled (operator manually applied a routing label, or recovered a
+# previously-skipped issue). The `dispatched` label is added by the workflow
+# after success and short-circuits the if-condition on subsequent triggers.
 
 on:
   issues:
-    types: [opened]
+    types: [opened, edited, labeled]
 
 permissions:
   contents: write
   issues: write
 
+# Serialize per-issue runs so two near-simultaneous triggers (e.g. opened +
+# labeled within the same second) don't both clear the dispatched-label
+# guard before either has run.
+concurrency:
+  group: on-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
 jobs:
   dispatch:
     if: |
-      contains(github.event.issue.labels.*.name, 'form: backfill') ||
-      contains(github.event.issue.labels.*.name, 'form: redraft-feedback')
+      (
+        startsWith(github.event.issue.title, '[Backfill]') ||
+        startsWith(github.event.issue.title, '[Redraft]')
+      ) && !contains(github.event.issue.labels.*.name, 'dispatched')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -30,14 +48,6 @@ jobs:
           cache: npm
       - run: npm ci
 
-      - name: Stringify labels
-        id: labels
-        env:
-          LABELS_JSON: ${{ toJSON(github.event.issue.labels.*.name) }}
-        run: |
-          # Convert ["a","b"] → "a,b" for the dispatcher.
-          echo "list=$(echo "$LABELS_JSON" | jq -r 'join(",")')" >> "$GITHUB_OUTPUT"
-
       - name: Dispatch issue form
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -46,8 +56,23 @@ jobs:
           FUNDED_BOT_IDENTITY: '1'
           ISSUE_BODY: ${{ github.event.issue.body }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_LABELS: ${{ steps.labels.outputs.list }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
         run: npx tsx scripts/dispatch-issue.ts
 
       - name: Push commits
+        if: always()
         run: git push origin HEAD:main || echo "Nothing to push."
+
+      - name: Mark dispatched
+        # Add a `dispatched` label as an anti-replay guard so subsequent
+        # edits/label changes on the same issue don't re-fire the workflow.
+        # Octokit auto-creates the label if it doesn't yet exist.
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/labels" \
+            -d '{"labels":["dispatched"]}' >/dev/null

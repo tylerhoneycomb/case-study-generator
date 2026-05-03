@@ -2,15 +2,21 @@
 // =============================================================================
 // scripts/dispatch-issue.ts
 //
-// Parses a newly-opened Issue Form and dispatches to the matching CLI.
+// Parses an Issue Form submission and dispatches to the matching CLI.
 // Invoked by .github/workflows/on-issue.yml.
 //
 // Reads from env:
-//   ISSUE_NUMBER     — the issue's number
-//   ISSUE_BODY       — the rendered issue body (Issue Forms produce a
-//                      structured Markdown body with `### Field name` headers)
-//   ISSUE_LABELS     — comma-separated list of labels (we route on the
-//                      `form: backfill` / `form: redraft-feedback` markers)
+//   ISSUE_NUMBER   — the issue's number
+//   ISSUE_TITLE    — the issue title (used for routing — robust against the
+//                    silent-label-drop GitHub does when an Issue Form's
+//                    `labels:` list contains labels that don't yet exist in
+//                    the repo)
+//   ISSUE_BODY     — the rendered issue body (Issue Forms produce a
+//                    structured Markdown body with `### Field name` headers)
+//
+// Routing (by title prefix):
+//   "[Backfill] …"  → scripts/backfill.ts
+//   "[Redraft] …"   → scripts/redraft.ts
 //
 // The Issue Form rendering convention:
 //   ### Field label
@@ -71,24 +77,23 @@ async function runCli(scriptPath: string, args: string[]): Promise<void> {
 
 async function main(): Promise<void> {
   const body = process.env['ISSUE_BODY'] ?? '';
-  const labelsRaw = process.env['ISSUE_LABELS'] ?? '';
+  const title = process.env['ISSUE_TITLE'] ?? '';
   const issueRaw = process.env['ISSUE_NUMBER'] ?? '';
   const issueNumber = Number.parseInt(issueRaw, 10);
   if (Number.isNaN(issueNumber)) throw new Error('ISSUE_NUMBER env var missing or invalid.');
   setTrackingIssue(issueNumber);
 
-  const labels = labelsRaw.split(',').map((s) => s.trim());
   const issueArg = `--issue=${issueNumber}`;
 
-  if (labels.includes('form: backfill')) {
+  if (title.startsWith('[Backfill]')) {
     await runBackfill(body, issueArg);
     return;
   }
-  if (labels.includes('form: redraft-feedback')) {
+  if (title.startsWith('[Redraft]')) {
     await runRedraft(body, issueArg);
     return;
   }
-  info('no form label match; ignoring', { labels });
+  info('title prefix did not match any form; ignoring', { title });
 }
 
 async function runBackfill(body: string, issueArg: string): Promise<void> {
@@ -126,3 +131,4 @@ main().catch((err: unknown) => {
   logError('dispatch-issue crashed', { message: (err as Error).message });
   process.exit(1);
 });
+
