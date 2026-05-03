@@ -24,14 +24,7 @@ import {
 import { exists } from './lib/mdx.js';
 import { estimateCostForGeneration } from './lib/claude.js';
 import { addLabel, addComment } from './lib/github.js';
-
-function parseSlugs(raw: string | undefined): string[] {
-  if (!raw) return [];
-  return raw
-    .split(/\r?\n|,/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !s.startsWith('#'));
-}
+import { parseSlugs } from './lib/parse-slugs.js';
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
