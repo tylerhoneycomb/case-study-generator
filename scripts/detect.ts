@@ -144,13 +144,21 @@ async function main(): Promise<void> {
   summary.eligible = eligible.map((c) => c.slug);
 
   // ---- 3. Iterate eligible candidates newest-first, rate-limited ----
+  // Dry-run accounting: snapshot today's remaining budget once, then walk
+  // it down as we "would have" consumed. canConsume() alone can't do this
+  // because it's read-only — without simulating the decrement, every
+  // candidate sees the same `true` answer and the deferred count is wrong.
+  let dryRunSlotsLeft = 0;
+  if (dryRun) {
+    dryRunSlotsLeft = (await rateStatus()).remaining;
+  }
+
   for (const candidate of eligible) {
     if (dryRun) {
-      // Account for what *would* have been deferred under the live cap so
-      // the dry-run row is honest about queue depth. canConsume() doesn't
-      // mutate state, so this is safe to call repeatedly.
-      if (!(await canConsume())) {
+      if (dryRunSlotsLeft <= 0) {
         summary.rateLimitDeferred.push(candidate.slug);
+      } else {
+        dryRunSlotsLeft--;
       }
       continue;
     }
