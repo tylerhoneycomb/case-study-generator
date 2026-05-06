@@ -6,7 +6,11 @@ name: Detect
 
 on:
   schedule:
-    - cron: '0 12 * * *'   # noon UTC daily
+    # 12:07 UTC daily. Off the top-of-the-hour (and especially noon UTC,
+    # which is one of GitHub Actions' busiest cron slots) so we get less
+    # delay/skipping. Per GitHub's docs, scheduled workflows can be delayed
+    # during high-load periods; offsetting from the hour boundary helps.
+    - cron: '7 12 * * *'
   workflow_dispatch:
     inputs:
       dry-run:
