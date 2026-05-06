@@ -18,9 +18,9 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — scrapes invest.honeycombcredit.com,
-       │   (detect.yml)         │  diffs against .state/observed-fundraising.json,
-       └────────────┬───────────┘  catches transitions to Funded.
+       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -96,6 +96,7 @@ scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
   status.ts cost-estimate.ts dispatch-comment.ts dispatch-issue.ts
   lib/
+    posthog.ts            ← HogQL client — discovery source for funded slugs
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
     humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
@@ -114,7 +115,6 @@ scripts/
   ISSUE_TEMPLATE/
     backfill.yml redraft-with-feedback.yml config.yml
 .state/
-  observed-fundraising.json  ← every Fundraising slug the cron has ever seen
   detection-log.md           ← daily cron heartbeat (one row per run)
   ratelimit.json             ← today's generation counter
 prompts/
@@ -125,8 +125,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/observed-fundraising.json`](.state/observed-fundraising.json) | Tracked slug ledger — every Fundraising slug the cron has ever seen | Already committed; updated on each cron run |
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -153,6 +152,6 @@ Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill iss
 
 ## Known gaps
 
-- **Listing-window blind spot.** `invest.honeycombcredit.com/`'s server-side listing only renders ~10 currently-most-active Fundraising campaigns. If the active count exceeds that, the cron systematically misses the slugs below the cutoff. Backfilling missed campaigns through the portal is the workaround. The proper fix needs a back-office data source.
 - **Founder-level input data.** Current input payload (campaign summary + use-of-proceeds + metrics) doesn't include the founder's name, photo, or verbatim Q&A. The "Ask The Founders" tab on each campaign page would unlock this and is the single biggest quality lever still on the roadmap. See `prompts/case-study-prompt.md` §6 for what the prompt does to compensate today.
 - **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-3 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "3/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
+- **Pre-2026 historical campaigns are not auto-published.** The PostHog detection query floors at `campaignexpirationdate >= '2026-01-01'`. ~570 historical funded campaigns are visible to PostHog but intentionally skipped by the cron — Tyler will hand-pick any he wants published via the Backfill Issue Form.

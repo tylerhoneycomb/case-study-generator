@@ -1,8 +1,10 @@
 name: Detect
-# Daily detection of newly funded campaigns. Per scope Section 6: cron at
-# noon UTC, plus workflow_dispatch for manual runs. The script opens a
-# tracking issue per newly-funded campaign, generates the case study, commits
-# the MDX + hero image, and updates .state/observed-fundraising.json.
+# Daily detection of newly funded campaigns. Discovery is via PostHog
+# (Fivetran-mirrored postgres.campaigns); per-campaign content is still
+# scraped from invest.honeycombcredit.com inside runPipeline(). The script
+# opens a tracking issue per newly-funded campaign that clears the rate-limit
+# gate, generates the case study, and commits the MDX + hero image. The
+# detection-log row is appended on every run (including dry-run).
 
 on:
   schedule:
@@ -41,6 +43,12 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          # PostHog discovery — replaces the listing-scrape blind spot.
+          # POSTHOG_API_KEY: personal API key with project:query:read
+          # POSTHOG_PROJECT_ID: numeric project ID (Honeycomb Credit Production)
+          # Both must be added at .../settings/secrets/actions.
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          POSTHOG_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
           FUNDED_BOT_IDENTITY: '1'
         run: |
           if [[ "${{ inputs.dry-run }}" == "true" ]]; then
