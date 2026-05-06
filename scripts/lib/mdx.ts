@@ -107,6 +107,30 @@ export async function findByCampaignSlug(
   return null;
 }
 
+// One-pass scan of every committed case study, returning the set of source
+// `campaignSlug` values. Cheaper than calling findByCampaignSlug() per
+// candidate during detection — one readdir + N reads instead of N * (readdir
+// + N reads). Used by scripts/detect.ts to filter PostHog candidates against
+// already-published campaigns before rate-limiting and issue creation.
+export async function listAllCampaignSlugs(): Promise<Set<string>> {
+  const out = new Set<string>();
+  let entries: string[];
+  try {
+    entries = await fs.readdir(CONTENT_DIR);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return out;
+    throw err;
+  }
+  for (const name of entries) {
+    if (!name.endsWith('.mdx')) continue;
+    const slug = name.slice(0, -'.mdx'.length);
+    const file = await readCaseStudy(slug);
+    const cs = file?.frontmatter['campaignSlug'];
+    if (typeof cs === 'string' && cs) out.add(cs);
+  }
+  return out;
+}
+
 export const paths = {
   CONTENT_DIR,
 } as const;

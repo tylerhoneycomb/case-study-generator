@@ -14,9 +14,10 @@ import { setTrackingIssue, info, error as logError, stage } from './lib/log.js';
 import { status as rateStatus } from './lib/ratelimit.js';
 
 async function lastDetectionMtime(): Promise<string | null> {
-  // Use the observed-fundraising state file's last modification as a proxy
-  // for the last successful detection run.
-  const f = path.resolve(process.cwd(), '.state/observed-fundraising.json');
+  // Detection log is appended on every cron run (including dry-run and zero-
+  // activity days), so its mtime is the truthiest "did the cron run lately"
+  // signal we have committed to the repo.
+  const f = path.resolve(process.cwd(), '.state/detection-log.md');
   try {
     const s = await fs.stat(f);
     return s.mtime.toISOString();
