@@ -38,6 +38,7 @@ import { formatMoney } from './lib/format.js';
 import * as git from './lib/git.js';
 
 const STATE_FILE = path.resolve(process.cwd(), '.state/observed-fundraising.json');
+const LOG_FILE = path.resolve(process.cwd(), '.state/detection-log.md');
 
 interface Observed {
   // slug → lastKnownStage
@@ -57,6 +58,46 @@ async function readObserved(): Promise<Observed> {
 async function writeObserved(state: Observed): Promise<void> {
   await fs.mkdir(path.dirname(STATE_FILE), { recursive: true });
   await fs.writeFile(STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+}
+
+// Append a row to .state/detection-log.md on every run, including
+// zero-activity days. The cron is otherwise silent on quiet days; a state
+// file (not an Issue) gives the operator a way to confirm the cron ran
+// without generating notification noise on watchers' inboxes.
+async function appendDetectionLog(row: {
+  ranAt: string;
+  scanned: number;
+  newFundraising: number;
+  candidates: number;
+  newlyFunded: number;
+  generated: number;
+  queued: number;
+  failed: number;
+}): Promise<void> {
+  await fs.mkdir(path.dirname(LOG_FILE), { recursive: true });
+
+  const header =
+    '# Detection log\n\n' +
+    'One row per cron run. Zero-activity rows confirm the cron ran without ' +
+    'finding new transitions. Errors and per-campaign generations still open ' +
+    'GitHub issues; this file is the audit trail for the rest.\n\n' +
+    '| ran at | scanned | new fundraising | candidates checked | newly funded | generated | queued | failed |\n' +
+    '|---|---|---|---|---|---|---|---|\n';
+
+  const rowLine = `| ${row.ranAt} | ${row.scanned} | ${row.newFundraising} | ${row.candidates} | ${row.newlyFunded} | ${row.generated} | ${row.queued} | ${row.failed} |\n`;
+
+  let existing = '';
+  try {
+    existing = await fs.readFile(LOG_FILE, 'utf8');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+
+  if (!existing) {
+    await fs.writeFile(LOG_FILE, header + rowLine, 'utf8');
+  } else {
+    await fs.appendFile(LOG_FILE, rowLine, 'utf8');
+  }
 }
 
 interface DetectionSummary {
@@ -213,10 +254,25 @@ async function main(): Promise<void> {
   // ---- Persist state and commit ----
   await writeObserved(observed);
 
+  // Daily detection log — appended on every run including dry-run, so the
+  // log is honest about what was attempted. The state commit below picks
+  // it up alongside the observed-fundraising.json change.
+  const ranAt = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  await appendDetectionLog({
+    ranAt: dryRun ? `${ranAt} (dry-run)` : ranAt,
+    scanned: summary.scanned,
+    newFundraising: summary.newFundraisingTracked,
+    candidates: summary.candidatesChecked,
+    newlyFunded: summary.newlyFunded.length,
+    generated: summary.generated.length,
+    queued: summary.queued.length,
+    failed: summary.failed.length,
+  });
+
   if (!dryRun) {
     await git.configureBotIdentity();
-    await git.add(STATE_FILE);
-    await git.commit('chore(state): update observed-fundraising state');
+    await git.add(STATE_FILE, LOG_FILE);
+    await git.commit('chore(state): update observed-fundraising + detection log');
   }
 
   // ---- Daily summary ----
