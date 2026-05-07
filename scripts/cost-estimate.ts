@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     '',
     `Slugs: ${slugs.map((s) => `\`${s}\``).join(', ')}`,
     '',
-    `Estimate is based on a typical input of ~8000 tokens and a typical output of ~2000 tokens at the active model's published rate. Actual cost varies with the campaign's summary length.`,
+    `Estimate is based on a typical generation of ~17,000 input tokens and ~2,800 output tokens at the active model's published rate (Opus 4.7: $15/$75 per Mtok). Actual cost varies with the campaign's summary length.`,
   ].join('\n');
 
   await stage(body);

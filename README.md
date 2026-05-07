@@ -18,7 +18,7 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   12:07 UTC daily cron │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -52,7 +52,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +62,20 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs env vars (copy `.env.example` and fill in values):
+
+| Variable | Required for |
+|---|---|
+| `ANTHROPIC_API_KEY` | `generate`, `redraft`, `backfill` |
+| `GITHUB_TOKEN` | issue/comment ops (`scripts/lib/github.ts`) |
+| `POSTHOG_API_KEY` | `detect` (PostHog HogQL query) |
+| `POSTHOG_PROJECT_ID` | `detect` |
+| `POSTHOG_HOST` | `detect` (optional; defaults to `https://us.posthog.com`) |
+
+In CI all secrets are wired up via repo secrets and `secrets.GITHUB_TOKEN`. `POSTHOG_API_KEY` / `POSTHOG_PROJECT_ID` must be added manually at Settings → Secrets → Actions.
 
 ```bash
 npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
