@@ -60,8 +60,32 @@ jobs:
         run: npx tsx scripts/dispatch-issue.ts
 
       - name: Push commits
+        id: push
         if: always()
-        run: git push origin HEAD:main || echo "Nothing to push."
+        run: |
+          set +e
+          out=$(git push origin HEAD:main 2>&1)
+          rc=$?
+          set -e
+          echo "$out"
+          if [ $rc -ne 0 ]; then
+            echo "Nothing to push (or push failed)."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          elif echo "$out" | grep -q "Everything up-to-date"; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger deploy
+        # Pushes authenticated with the default GITHUB_TOKEN don't trigger
+        # downstream `push:` workflows. workflow_dispatch is an exception,
+        # so we explicitly dispatch deploy.yml when a Backfill or Redraft
+        # issue actually pushed a content commit.
+        if: always() && steps.push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main
 
       - name: Mark dispatched
         # Add a `dispatched` label as an anti-replay guard so subsequent
