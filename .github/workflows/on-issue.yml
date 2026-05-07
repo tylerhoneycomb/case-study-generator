@@ -19,6 +19,9 @@ on:
 permissions:
   contents: write
   issues: write
+  # actions: write is required for the explicit `gh workflow run deploy.yml`
+  # step at the end. Without it, the dispatch call 403s.
+  actions: write
 
 # Serialize per-issue runs so two near-simultaneous triggers (e.g. opened +
 # labeled within the same second) don't both clear the dispatched-label
