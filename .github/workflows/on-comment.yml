@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
   issues: write
+  # actions: write is required for the explicit `gh workflow run deploy.yml`
+  # step at the end. Without it, the dispatch call 403s.
+  actions: write
 
 jobs:
   dispatch:
