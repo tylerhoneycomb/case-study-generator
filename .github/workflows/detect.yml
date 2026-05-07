@@ -58,8 +58,33 @@ jobs:
           fi
 
       - name: Push commits
+        id: push
         if: ${{ inputs.dry-run != 'true' }}
         run: |
           # detect.ts commits state changes + per-slug content commits.
-          # Push them all in one go.
-          git push origin HEAD:main || echo "Nothing to push."
+          # Capture push output so the next step can decide whether the
+          # deploy needs to fire.
+          set +e
+          out=$(git push origin HEAD:main 2>&1)
+          rc=$?
+          set -e
+          echo "$out"
+          if [ $rc -ne 0 ]; then
+            echo "Nothing to push (or push failed)."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          elif echo "$out" | grep -q "Everything up-to-date"; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger deploy
+        # Pushes authenticated with the default GITHUB_TOKEN don't trigger
+        # downstream `push:` workflows (GitHub's recursion safeguard).
+        # workflow_dispatch IS an exception, so we explicitly dispatch
+        # deploy.yml here whenever the cron actually pushed content.
+        # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#triggering-a-workflow-from-a-workflow
+        if: ${{ inputs.dry-run != 'true' && steps.push.outputs.pushed == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main

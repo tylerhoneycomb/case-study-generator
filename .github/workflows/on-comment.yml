@@ -57,4 +57,28 @@ jobs:
         run: npx tsx scripts/dispatch-comment.ts
 
       - name: Push commits
-        run: git push origin HEAD:main || echo "Nothing to push."
+        id: push
+        run: |
+          set +e
+          out=$(git push origin HEAD:main 2>&1)
+          rc=$?
+          set -e
+          echo "$out"
+          if [ $rc -ne 0 ]; then
+            echo "Nothing to push (or push failed)."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          elif echo "$out" | grep -q "Everything up-to-date"; then
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger deploy
+        # Pushes authenticated with the default GITHUB_TOKEN don't trigger
+        # downstream `push:` workflows. workflow_dispatch is an exception,
+        # so we explicitly dispatch deploy.yml when /funded {generate,
+        # redraft,delete} actually pushed a content commit.
+        if: steps.push.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --ref main
