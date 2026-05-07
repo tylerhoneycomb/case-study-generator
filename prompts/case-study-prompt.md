@@ -698,7 +698,7 @@ The input `summary` is HTML the owner wrote on the Honeycomb platform and may co
 
 ## 12. Failure modes to avoid
 
-These are the patterns that either read as AI-generated or are blocked outright by the Wix humanization validator. The validator runs on every CMS insert/update; copy that trips it sets `humanizationChecked = false` and the page renders as 404 until a human edits it. Treat this section as absolute.
+These are the patterns that read as AI-generated. The validator in `scripts/lib/humanize.ts` runs after generation and rejects any draft that trips them — no MDX is written, the tracking issue gets the `error` label, and the case study fails to generate. Treat this section as absolute.
 
 The validator covers `story` and `metaDescription`. The other text fields are not validated but should follow the same rules — a reviewer reading them will smell AI even if the regex won't catch it.
 
@@ -873,8 +873,8 @@ For each item below, scan your `story` and `metaDescription` and confirm zero vi
 2. **Hedge phrases (Section 12.1).** Zero occurrences of any phrase in the §12.1 list.
 3. **"Not just/only/merely/simply X but Y" (Section 12.1).** Zero occurrences. Search for "not just", "not only", "not merely", "not simply".
 4. **Generic openers (Section 12.3).** First sentence of `story` does not begin with any of: {{HUMANIZATION_BANNED_OPENERS}}.
-5. **Em-dash count.** Count the em-dashes (`—`) in `story`. With an 800–1,200 word body, more than {{HUMANIZATION_EM_DASH_THRESHOLD}} per 500 words trips the cap. Target zero or one across the whole body.
-6. **Tricolon count.** Count "X, Y, and Z" patterns where each item is 1–3 words. More than {{HUMANIZATION_TRICOLON_THRESHOLD}} per 500 words trips the cap. Target zero or one across the whole body.
+5. **Em-dash count.** Count the em-dashes (`—`) in `story`. With an 800–1,200 word body, more than {{HUMANIZATION_EM_DASH_THRESHOLD}} per 500 words trips the cap.
+6. **Tricolon count.** Count "X, Y, and Z" patterns where each item is 1–3 words. More than {{HUMANIZATION_TRICOLON_THRESHOLD}} per 500 words trips the cap.
 7. **Sentence rhythm (Section 12.6.6).** Confirm at least 3 sentences under 8 words, at least 1 sentence over 25 words, and at least one single-sentence paragraph.
 
 If after a fix you find yourself second-guessing the rewrite, prefer a shorter, plainer version. A blunt sentence that lands beats a clever one that trips a rule.
@@ -896,8 +896,8 @@ Before emitting the output JSON, verify every item below. If any check fails, fi
 9. **Story contains only allowlisted HTML tags** (Section 11). No `<div>`, no `<img>`, no inline styles, no class attributes.
 10. **First sentence of story passes opening check** (Section 12.3).
 11. **Scan story and metaDescription for every blocked phrase and word** (Sections 12.1, 12.2). Zero occurrences.
-12. **Count em-dashes in story.** Should be 0 or 1.
-13. **Count tricolons (A, B, and C patterns with 1–3 word items) in story.** Should be 0–2 across the whole story, regardless of length.
+12. **Count em-dashes in story.** More than {{HUMANIZATION_EM_DASH_THRESHOLD}} per 500 words trips the cap.
+13. **Count tricolons (A, B, and C patterns with 1–3 word items) in story.** More than {{HUMANIZATION_TRICOLON_THRESHOLD}} per 500 words trips the cap.
 14. **Company name everywhere is "Honeycomb Credit" or "Honeycomb"** — no "HoneyComb," "Honey Comb," or other casings.
 15. **No invented facts.** Every concrete claim traces back to the input payload.
 16. **No fabricated quotes** unless verbatim in `summary`.

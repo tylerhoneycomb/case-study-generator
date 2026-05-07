@@ -4,8 +4,11 @@
 // Density-checked rules verify both above- and below-threshold behavior.
 // =============================================================================
 
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { validateCopy, stripHtml, formatIssuesForReviewer } from './humanize.js';
+import { applyPromptSubstitutions } from './humanization-rules.js';
 
 // ~500 words, deliberately written to avoid every AI tell pattern. Used as
 // the baseline that should pass cleanly. Density-edge tests append small
@@ -148,6 +151,18 @@ describe('stripHtml', () => {
   });
   it('collapses whitespace', () => {
     expect(stripHtml('<p>a</p>\n\n<p>b</p>')).toBe('a b');
+  });
+});
+
+describe('applyPromptSubstitutions', () => {
+  // Guards against adding `{{HUMANIZATION_FOO}}` to the prompt without
+  // adding a matching entry to PromptSubstitutions. An unfilled placeholder
+  // would silently leak into the system prompt sent to Claude.
+  it('substitutes every {{HUMANIZATION_*}} placeholder in the runtime prompt', async () => {
+    const promptPath = path.resolve(process.cwd(), 'prompts/case-study-prompt.md');
+    const raw = await fs.readFile(promptPath, 'utf8');
+    const substituted = applyPromptSubstitutions(raw);
+    expect(substituted).not.toMatch(/\{\{HUMANIZATION_/);
   });
 });
 
