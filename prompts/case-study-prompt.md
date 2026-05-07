@@ -704,26 +704,24 @@ The validator covers `story` and `metaDescription`. The other text fields are no
 
 ### 12.1 Blocked phrase constructions — a single occurrence of any of these fails the page
 
-- **"not just / not only / not merely / not simply X, but Y"** — and any variant. The brand itself uses this construction in some materials ("not just a financial transaction"), but generated case-study copy must not. Rephrase: instead of "Honeycomb is not just a loan — it's a community," write "Honeycomb's loans come from the community the business already has."
-- **"it's worth noting that..."**, **"it's important to note / remember / understand..."**
-- **"at the end of the day..."**
-- **"when it comes to..."**
-- **"needless to say..."**
-- **"in today's world / landscape / environment..."**
+- **"not just / not only / not merely / not simply X, but Y"** — and any variant. The brand itself uses this construction in some materials ("not just a financial transaction"), but generated case-study copy must not. The validator looks for the pivots {{HUMANIZATION_NOT_JUST_BUT_PIVOTS}}. Rephrase: instead of "Honeycomb is not just a loan — it's a community," write "Honeycomb's loans come from the community the business already has."
+- The following hedge / filler phrases are blocked. A single occurrence fails the page. Rewrite the surrounding sentence to state the claim directly:
+
+{{HUMANIZATION_BANNED_HEDGE_PHRASES}}
 
 ### 12.2 Blocked AI vocabulary — a single occurrence of any fails the page
 
-`delve`, `tapestry`, `landscape of`, `groundbreaking`, `revolutionize`, `ever-evolving` or `ever evolving`, `transform the way`, `unlock the potential` (and `unlocks/unlocked`), `navigate the complex`, `foster a sense of` (and `fosters/fostered`), `harness the power` (and `harnesses/harnessed`).
+{{HUMANIZATION_BANNED_VOCABULARY}}.
 
 Note that several of these overlap with things Honeycomb itself says on its marketing site ("unlocks growth opportunities"). This prompt takes precedence. Express the same idea with plain verbs: *opens up, makes possible, gives access to, turns into, lets.*
 
 ### 12.3 Blocked openings
 
-The first sentence of `story` must not begin with any of: `In today's`, `In the world of`, `Imagine a`, `Picture this`, `Have you ever wondered`. Open on a concrete moment or a specific noun instead.
+The first sentence of `story` must not begin with any of: {{HUMANIZATION_BANNED_OPENERS}}. Open on a concrete moment or a specific noun instead.
 
 ### 12.4 Density-limited patterns
 
-- **Tricolons — the most common AI tell to manage in this work.** The "A, B, and C" pattern where each item is 1–3 words is the rhythm Claude reaches for when describing scope (`pastas, soups, and grains`), categorizing (`Italian, Mexican, and Asian profiles`), or surveying surfaces (`website, social channels, and storefront`). The validator's hard ceiling is 2 per 500 words; a 1,000-word story above 4 tricolons fails. **Target zero or one tricolon across the entire body.** Save the construction for a moment that genuinely earns it (a memorable list of investor archetypes, the three things the owner did first with the money) — not for routine description.
+- **Tricolons — the most common AI tell to manage in this work.** The "A, B, and C" pattern where each item is 1–3 words is the rhythm Claude reaches for when describing scope (`pastas, soups, and grains`), categorizing (`Italian, Mexican, and Asian profiles`), or surveying surfaces (`website, social channels, and storefront`). The validator's hard ceiling is **{{HUMANIZATION_TRICOLON_THRESHOLD}} per 500 words**; a 1,000-word story above that fails. **Target zero or one tricolon across the entire body.** Save the construction for a moment that genuinely earns it (a memorable list of investor archetypes, the three things the owner did first with the money) — not for routine description.
 
   Before generating each sentence with three parallel items, ask: do you need to name three? Could one specific example let the reader infer the rest? Could the list become a single descriptive phrase or a clause?
 
@@ -735,7 +733,7 @@ The first sentence of `story` must not begin with any of: `In today's`, `In the 
   | `inventory, marketing, and operations` | `inventory, plus the marketing and back-office work that comes with new stores` |
   | `more jars, more demos, more shelves` | `the work that was already underway, with more of the runway it needs` (the closing-cadence variant — also avoid) |
 
-- **Em-dashes** (`—`) — keep under **1 per 500 words**. Prefer commas or periods.
+- **Em-dashes** (`—`) — the validator's hard ceiling is **{{HUMANIZATION_EM_DASH_THRESHOLD}} per 500 words**. Staying under 1 per 500 words is the safe target. Prefer commas, periods, or sentence breaks. Two consecutive em-dashes in the same paragraph almost always signals one too many — replace one of them with a period and start a new sentence.
 
 ### 12.5 Content failure modes
 
@@ -753,6 +751,70 @@ The first sentence of `story` must not begin with any of: `In today's`, `In the 
 - "Proves that..."
 - Three consecutive sentences that all start with a participle ("Opening the shop... Bringing the community... Turning customers...").
 - "This is a story about..." (it is; show, don't announce).
+
+### 12.6.5 Contrastive examples — paired ❌ / ✅ rewrites
+
+Each pair below shows a real or realistic ❌ that would trip the validator and the ✅ rewrite that should have shipped instead. The validator's behavior is fixed; matching the ✅ shape is what gets the page published.
+
+**Vocabulary** (Section 12.2)
+
+❌ "Honeycomb's platform enables businesses to harness the power of community investment, transforming the way local enterprises access capital."
+✅ "Honeycomb lets businesses raise money from the people who already know them."
+
+❌ "The campaign helped foster a sense of ownership among the regulars."
+✅ "Forty-three regulars now have a small stake in the bakery."
+
+**Em-dashes** (Section 12.4 — hard cap **{{HUMANIZATION_EM_DASH_THRESHOLD}} per 500 words**)
+
+❌ "The distillery — which opened in 2019 — needed funding for expansion — a new tasting room and aged inventory — and turned to Honeycomb — the only platform that fit the timeline."
+✅ "The distillery opened in 2019 and needed funding for a new tasting room and aged inventory. Honeycomb fit the timeline."
+
+❌ "For a distillery whose growth depends on visitors, on tour buses, and on bottles moving across 20 — soon 50 — Kentucky bar and restaurant accounts, having dozens of investors with a small financial reason to recommend the place is the kind of asset a bank loan does not come with."
+✅ "The distillery's growth depends on visitors, tour buses, and bottles moving across 20 Kentucky bar and restaurant accounts (soon 50). Investors who recommend the place are the kind of asset a bank loan does not come with."
+(Real example, drawn from a flagged Stillhouse draft. Two parenthetical em-dashes inside one sentence is the exact density that trips the cap.)
+
+**Tricolons** (Section 12.4 — hard cap **{{HUMANIZATION_TRICOLON_THRESHOLD}} per 500 words**)
+
+❌ "The campaign built awareness, deepened loyalty, and created lasting community bonds."
+✅ "The campaign turned regular customers into investors."
+
+❌ "On a campaign this size, the investor list looks more like a guest book — Bourbon Trail visitors, locals who know the property, accounts who already pour the bourbon, and repeat backers from the first raise."
+✅ "On a campaign this size, the investor list looks more like a guest book. Most of the names are Bourbon Trail visitors and locals who know the property; a handful are accounts that already pour the bourbon."
+(Real example, drawn from a flagged Stillhouse draft. Pick the two most distinctive archetypes and let the others go.)
+
+**Hedge phrases** (Section 12.1)
+
+❌ "It's worth noting that the bakery had already built a loyal following before the campaign opened."
+✅ "The bakery had 200 weekly regulars before the campaign opened."
+
+❌ "When it comes to small-batch bone broth, Brothmonger has been doing it since 2018."
+✅ "Brothmonger has been making small-batch bone broth since 2018."
+
+**Not-just-but** (Section 12.1)
+
+❌ "The raise wasn't just about funding — it was about building a movement."
+✅ "The raise funded the expansion. It also gave 87 locals a stake in the business."
+
+❌ "Honeycomb is not just a lending platform but a community builder."
+✅ "Honeycomb's loans come from the community the business already has."
+
+**Generic openers** (Section 12.3)
+
+❌ "In the heart of downtown Pittsburgh, a small brewery is proving that community investment can change everything."
+✅ "Steel City Brewing needed $250,000 for a canning line. They got it in 11 days."
+
+❌ "In today's evolving food landscape, BareSöl Spice Co. is making its mark with bold, authentic flavors."
+✅ "BareSöl sells four seasoning blends out of Hendersonville, Tennessee. They go on chicken thighs on a Tuesday and on the seafood boil on a Saturday."
+
+### 12.6.6 Sentence rhythm — burstiness over uniformity
+
+The single biggest tell of AI prose is uniform sentence length. A case study should read like a person talking, not a press release. Mix the three bands:
+
+- **Short (3–7 words):** "It worked." / "That changed everything." / "The math was simple."
+- **Medium (10–20 words):** for most of the work.
+- **Long (25–35 words):** sparingly, only when building toward a payoff.
+
+Do not write three consecutive sentences of similar length. If you just wrote a 15-word sentence, the next one should be noticeably shorter or longer. The rhythm-variation rule in Section 6.7 codifies the per-piece minima (≥3 sentences under 8 words; ≥1 sentence over 25 words; at least one single-sentence paragraph). The contrastive ✅ examples above are calibrated to that rhythm — study how the short sentences land between longer ones.
 
 ### 12.7 Pre-output blandness check
 
@@ -798,6 +860,24 @@ Cases requiring particular care:
 - **Outcomes.** `useOfProceeds` tells you what the business said they *would* do with the money. You may say "the funds went toward X." You may not say "the new kitchen is now serving Y customers a week" unless that is explicitly in the input.
 - **Investment structure.** The `investmentType` field may be `Debt`, `Revenue Share`, `Preferred Equity`, or another structure. Use the phrase *"fixed-rate, fixed-term community-funded loan"* only when `investmentType` is `Debt`. For `Revenue Share`, use *"community-funded revenue share offering"* or *"community-backed revenue share"*. For `Preferred Equity`, use *"community-funded preferred equity raise"* or *"community-backed raise"*. When in doubt, fall back to the neutral terms *"Honeycomb raise"* or *"community-funded raise"* — both are always accurate. Never describe a non-Debt offering as a loan. This is a compliance-adjacent error, not a style preference.
 - **Dates.** Use `campaignStartDate` and `campaignExpirationDate` to describe the raise window. Do not predict when a project will open unless the input gives a date.
+
+---
+
+## 13.5 Humanization circuit-breaker — final review before output
+
+**This is a hard gate.** A draft that trips any of the rules below is rejected by the validator and never publishes. There is no human in the loop downstream — your draft either passes the validator on first attempt or the case study fails to generate. Treat this as the last thing you do before returning the JSON.
+
+For each item below, scan your `story` and `metaDescription` and confirm zero violations. If you find a violation, **fix it in place — do not flag it, do not comment, just rewrite the offending sentence and continue.** Then re-check.
+
+1. **Banned vocabulary (Section 12.2).** Search the body for each of: {{HUMANIZATION_BANNED_VOCABULARY}}. Zero occurrences.
+2. **Hedge phrases (Section 12.1).** Zero occurrences of any phrase in the §12.1 list.
+3. **"Not just/only/merely/simply X but Y" (Section 12.1).** Zero occurrences. Search for "not just", "not only", "not merely", "not simply".
+4. **Generic openers (Section 12.3).** First sentence of `story` does not begin with any of: {{HUMANIZATION_BANNED_OPENERS}}.
+5. **Em-dash count.** Count the em-dashes (`—`) in `story`. With an 800–1,200 word body, more than {{HUMANIZATION_EM_DASH_THRESHOLD}} per 500 words trips the cap. Target zero or one across the whole body.
+6. **Tricolon count.** Count "X, Y, and Z" patterns where each item is 1–3 words. More than {{HUMANIZATION_TRICOLON_THRESHOLD}} per 500 words trips the cap. Target zero or one across the whole body.
+7. **Sentence rhythm (Section 12.6.6).** Confirm at least 3 sentences under 8 words, at least 1 sentence over 25 words, and at least one single-sentence paragraph.
+
+If after a fix you find yourself second-guessing the rewrite, prefer a shorter, plainer version. A blunt sentence that lands beats a clever one that trips a rule.
 
 ---
 

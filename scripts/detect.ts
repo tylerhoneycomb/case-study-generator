@@ -33,7 +33,7 @@ import { fetchFundedCampaigns, PostHogError } from './lib/posthog.js';
 import { listAllCampaignSlugs } from './lib/mdx.js';
 import { runPipeline, PipelineError } from './lib/pipeline.js';
 import { canConsume, consume, status as rateStatus, RateLimitExceeded } from './lib/ratelimit.js';
-import { createIssue, addLabel, addComment, closeIssue } from './lib/github.js';
+import { createIssue, addLabel, closeIssue } from './lib/github.js';
 import * as git from './lib/git.js';
 
 const LOG_FILE = path.resolve(process.cwd(), '.state/detection-log.md');
@@ -200,13 +200,6 @@ async function main(): Promise<void> {
       await stage(`✅ Published — ${url}`, { commit: result.commitSha });
       summary.generated.push(result.slug);
       await addLabel(issue.number, 'published');
-      if (!result.humanizationPassed) {
-        await addLabel(issue.number, 'needs-review');
-        await addComment(
-          issue.number,
-          `Humanization validator flagged the following:\n\n\`\`\`\n${result.humanizationIssuesText}\n\`\`\``,
-        );
-      }
       await closeIssue(issue.number, 'completed');
     } catch (err) {
       const reason = err instanceof PipelineError ? `${err.stage}: ${err.message}` : (err as Error).message;

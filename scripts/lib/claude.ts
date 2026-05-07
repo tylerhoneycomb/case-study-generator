@@ -14,16 +14,21 @@ import Anthropic from '@anthropic-ai/sdk';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { ClaudeOutputSchema, type ClaudeOutput } from './schemas.js';
+import { applyPromptSubstitutions } from './humanization-rules.js';
 
 const DEFAULT_MODEL = process.env['CASE_STUDY_MODEL'] ?? 'claude-opus-4-7';
 const MAX_OUTPUT_TOKENS = 4096;
 
-// Load the prompt once per process.
+// Load the prompt once per process and substitute the {{HUMANIZATION_*}}
+// placeholders against the shared rules config (scripts/lib/humanization-rules.ts).
+// Both the validator and this prompt read from the same source so a banned
+// word added to the rules file shows up in the next generation automatically.
 let cachedPrompt: string | null = null;
 async function loadPrompt(): Promise<string> {
   if (cachedPrompt) return cachedPrompt;
   const file = path.resolve(process.cwd(), 'prompts/case-study-prompt.md');
-  cachedPrompt = await fs.readFile(file, 'utf8');
+  const raw = await fs.readFile(file, 'utf8');
+  cachedPrompt = applyPromptSubstitutions(raw);
   return cachedPrompt;
 }
 

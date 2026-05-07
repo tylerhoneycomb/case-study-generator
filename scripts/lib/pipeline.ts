@@ -45,8 +45,6 @@ export interface RunResult {
   estimatedCostUsd: number;
   inputTokens: number;
   outputTokens: number;
-  humanizationPassed: boolean;
-  humanizationIssuesText: string;
   commitSha: string;
 }
 
@@ -134,21 +132,30 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     outputTokens: claude.usage.outputTokens,
   });
 
-  // ---- 3. Humanization ----
+  // ---- 3. Humanization (hard gate) ----
+  // The validator is a circuit breaker, not a warning system. A flagged
+  // generation does NOT publish — we throw PipelineError(humanize) and the
+  // tracking issue gets the `error` label. The model is expected to clear
+  // the rules on first pass; the rules themselves are embedded in the
+  // runtime prompt via humanization-rules.ts substitutions.
   const plain = stripHtml(claude.output.story);
   const human = validateCopy(plain);
-  const humanizationIssuesText = formatIssuesForReviewer(human.issues);
   if (!human.passed) {
-    warn('Humanization validator flagged issues', {
+    const flags = human.issues.map((i) => i.type).join(', ');
+    const issuesText = formatIssuesForReviewer(human.issues);
+    warn('Humanization validator blocked generation', {
       issues: human.issues.map((i) => i.type),
     });
-    await stage('⚠️ Humanization validator flagged issues — review needed', {
+    await stage('❌ Humanization validator blocked generation — not publishing', {
       issueCount: human.issues.length,
       flags: human.issues.map((i) => i.type),
     });
-  } else {
-    await stage('✅ Humanization passed');
+    throw new PipelineError(
+      'humanize',
+      `Humanization validator blocked generation (${flags}). The draft was discarded; no MDX was written. Details:\n\n${issuesText}`,
+    );
   }
+  await stage('✅ Humanization passed');
 
   // ---- 4. Fetch + store hero image ----
   // extractHeroImageUrl priority chain (most stable → least stable):
@@ -246,8 +253,6 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     estimatedCostUsd: claude.usage.estimatedCostUsd,
     inputTokens: claude.usage.inputTokens,
     outputTokens: claude.usage.outputTokens,
-    humanizationPassed: human.passed,
-    humanizationIssuesText,
     commitSha: sha,
   };
 }
