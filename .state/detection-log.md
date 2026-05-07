@@ -5,3 +5,4 @@ One row per cron run. Zero-activity rows confirm the cron ran without finding ne
 | ran at | posthog returned | already published | eligible | generated | rate-limit deferred | failed |
 |---|---|---|---|---|---|---|
 | 2026-05-07 12:36 UTC | 22 | 4 | 18 | 3 | 15 | 0 |
+| 2026-05-07 18:14 UTC | 22 | 7 | 15 | 1 | 12 | 2 |
