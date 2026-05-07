@@ -1,28 +1,21 @@
 // =============================================================================
-// Humanization validator — TypeScript port of backend/humanization.jsw.
+// Humanization validator — circuit breaker for AI-writing tells.
 //
-// Detects common AI-writing tells in long-form copy. Regex-based floor, not a
-// semantic analyzer. Catches the most common patterns that show up in
-// model-generated prose.
+// Detects common AI-writing tells in long-form copy. Regex-based floor, not
+// a semantic analyzer. Called by pipeline.ts as a hard gate: a flagged
+// generation does NOT publish — the pipeline throws PipelineError and the
+// tracking issue gets the `error` label. The model is expected to produce
+// clean copy on first pass; the validator's job is to refuse anything that
+// slips through.
 //
-// Behavior identical to the Velo original:
-//   - validateCopy(plainText) → { passed, issues, wordCount }
-//   - density-checked rules (em-dash, tricolon list) flag only when density
-//     exceeds the threshold per 500 words
-//   - other rules flag on first occurrence
-//
-// Extend AI_TELLS as new patterns emerge. Mirror any additions in the
-// runtime prompt's Section 12 so the agent doesn't generate copy that
-// trips a rule we didn't tell it about.
+// All rules live in scripts/lib/humanization-rules.ts. That file is the
+// single source of truth — both this validator and the runtime prompt
+// (via prompts/case-study-prompt.md template substitution) read from it.
 // =============================================================================
 
-interface AITell {
-  type: string;
-  regex: RegExp;
-  message: string;
-  densityThreshold?: number;
-  isDensityCheck?: boolean;
-}
+import { buildAITells, type AITell } from './humanization-rules.js';
+
+export type { AITell };
 
 export interface HumanizationIssue {
   type: string;
@@ -38,52 +31,7 @@ export interface HumanizationResult {
   wordCount: number;
 }
 
-// Apostrophe class covers ASCII ' and Unicode right-single-quote U+2019.
-const APOS = "['’]";
-
-const AI_TELLS: AITell[] = [
-  {
-    type: 'not_just_but',
-    regex: /\bnot (just|only|merely|simply)\b[^.!?]{3,80}?\bbut\b/gi,
-    message: '"not just/only/merely X but Y" construction — rewrite without the pivot.',
-  },
-  {
-    type: 'hedge_phrase',
-    regex: new RegExp(
-      `\\b(it${APOS}s worth noting|it${APOS}s important to (note|remember|understand)|at the end of the day|when it comes to|needless to say|in today${APOS}s (world|landscape|environment))\\b`,
-      'gi',
-    ),
-    message: 'Hedge or filler phrase — cut or replace with something concrete.',
-  },
-  {
-    type: 'ai_vocab',
-    regex: /\b(delve|tapestry|landscape of|groundbreaking|revolutionize|ever[- ]evolving|transform the way|unlock(s|ed)? the potential|navigate the complex|foster(s|ed)? a sense of|harness(es|ed)? the power)\b/gi,
-    message: 'AI-overused vocabulary — swap for plainer language.',
-  },
-  {
-    type: 'generic_opener',
-    regex: new RegExp(
-      `^(\\s*<[^>]+>\\s*)*(in today${APOS}s|in the world of|imagine a|picture this|have you ever wondered)`,
-      'i',
-    ),
-    message: 'Generic opener — start with something specific to this business.',
-  },
-  {
-    type: 'tricolon_list',
-    // "A, B, and C" where each item is 1-3 words. Density-checked.
-    regex: /\b(\w+(?:\s\w+){0,2}), (\w+(?:\s\w+){0,2}), and (\w+(?:\s\w+){0,2})\b/g,
-    message: 'Tricolon (three-item parallel list) — over-reliance suggests AI rhythm.',
-    densityThreshold: 2,
-    isDensityCheck: true,
-  },
-  {
-    type: 'em_dash_overuse',
-    regex: /—/g,
-    message: 'Em-dash overuse — AI writing leans heavily on them.',
-    densityThreshold: 3,
-    isDensityCheck: true,
-  },
-];
+const AI_TELLS: AITell[] = buildAITells();
 
 export function validateCopy(plainText: string): HumanizationResult {
   if (!plainText || plainText.trim().length === 0) {
@@ -140,8 +88,8 @@ export function stripHtml(richText: string | null | undefined): string {
     .trim();
 }
 
-// Format an issue list as a reviewer-readable string. Used for issue comments
-// when the validator fails so the operator can see what to fix.
+// Format an issue list as a reviewer-readable string. Used for the
+// PipelineError message when validation blocks a generation.
 export function formatIssuesForReviewer(issues: HumanizationIssue[]): string {
   if (issues.length === 0) return '';
   return issues

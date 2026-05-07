@@ -20,7 +20,7 @@ import { parseArgs, requirePositional } from './lib/args.js';
 import { setTrackingIssue, info, error as logError, stage } from './lib/log.js';
 import { runPipeline, PipelineError } from './lib/pipeline.js';
 import { consume, canConsume, RateLimitExceeded } from './lib/ratelimit.js';
-import { addLabel, addComment } from './lib/github.js';
+import { addLabel } from './lib/github.js';
 import { readCaseStudy } from './lib/mdx.js';
 
 async function main(): Promise<void> {
@@ -88,14 +88,7 @@ async function main(): Promise<void> {
     await stage(`✅ Redrafted — ${slugUrl}`, {
       commit: result.commitSha,
       cost: `$${result.estimatedCostUsd.toFixed(3)}`,
-      humanizationPassed: result.humanizationPassed,
     });
-    if (!result.humanizationPassed && issueNumber !== null && !Number.isNaN(issueNumber)) {
-      await addComment(
-        issueNumber,
-        `Humanization validator flagged the redraft:\n\n\`\`\`\n${result.humanizationIssuesText}\n\`\`\``,
-      );
-    }
   } catch (err) {
     if (err instanceof PipelineError) {
       logError(`redraft failed at ${err.stage}`, { message: err.message });

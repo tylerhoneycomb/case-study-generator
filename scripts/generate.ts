@@ -18,7 +18,7 @@ import { parseArgs, requirePositional } from './lib/args.js';
 import { setTrackingIssue, info, error as logError, stage } from './lib/log.js';
 import { runPipeline, PipelineError } from './lib/pipeline.js';
 import { canConsume, consume, RateLimitExceeded } from './lib/ratelimit.js';
-import { addLabel, addComment, closeIssue } from './lib/github.js';
+import { addLabel, closeIssue } from './lib/github.js';
 import { findByCampaignSlug, deleteCaseStudy } from './lib/mdx.js';
 import { removeHeroImage } from './lib/image.js';
 
@@ -83,15 +83,7 @@ async function main(): Promise<void> {
     await stage(`✅ Published — ${slugUrl}`, {
       commit: result.commitSha,
       cost: `$${result.estimatedCostUsd.toFixed(3)}`,
-      humanizationPassed: result.humanizationPassed,
     });
-    if (!result.humanizationPassed && issueNumber !== null && !Number.isNaN(issueNumber)) {
-      await addLabel(issueNumber, 'needs-review');
-      await addComment(
-        issueNumber,
-        `Humanization validator flagged the following:\n\n\`\`\`\n${result.humanizationIssuesText}\n\`\`\``,
-      );
-    }
     if (issueNumber !== null && !Number.isNaN(issueNumber)) {
       await addLabel(issueNumber, 'published');
       await closeIssue(issueNumber, 'completed');
