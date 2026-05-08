@@ -83,9 +83,13 @@ async function main(): Promise<void> {
     await stage(`✅ Published — ${slugUrl}`, {
       commit: result.commitSha,
       cost: `$${result.estimatedCostUsd.toFixed(3)}`,
+      attempts: result.attempts,
     });
     if (issueNumber !== null && !Number.isNaN(issueNumber)) {
       await addLabel(issueNumber, 'published');
+      if (result.humanizationWarnings) {
+        await addLabel(issueNumber, 'humanization-warning');
+      }
       await closeIssue(issueNumber, 'completed');
     }
   } catch (err) {
