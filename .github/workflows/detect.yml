@@ -8,11 +8,14 @@ name: Detect
 
 on:
   schedule:
-    # 12:07 UTC daily. Off the top-of-the-hour (and especially noon UTC,
-    # which is one of GitHub Actions' busiest cron slots) so we get less
-    # delay/skipping. Per GitHub's docs, scheduled workflows can be delayed
-    # during high-load periods; offsetting from the hour boundary helps.
-    - cron: '7 12 * * *'
+    # 08:13 UTC daily = 04:13 EDT / 03:13 EST. Earliest reasonable
+    # off-peak slot: avoids GitHub Actions' busiest cron windows (00 UTC,
+    # 12 UTC, and any top-of-hour boundary), runs while Tyler's morning
+    # is still pre-dawn so a successful run is waiting in the inbox.
+    # Previous 12:07 UTC slot saw routine 25–30 min delays from cron
+    # contention near noon UTC; 08:xx slots typically dispatch within
+    # 5 min. Off-the-hour minute (:13) further reduces delay risk.
+    - cron: '13 8 * * *'
   workflow_dispatch:
     inputs:
       dry-run:
