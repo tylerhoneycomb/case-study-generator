@@ -88,7 +88,15 @@ async function main(): Promise<void> {
     await stage(`✅ Redrafted — ${slugUrl}`, {
       commit: result.commitSha,
       cost: `$${result.estimatedCostUsd.toFixed(3)}`,
+      attempts: result.attempts,
     });
+    if (
+      result.humanizationWarnings &&
+      issueNumber !== null &&
+      !Number.isNaN(issueNumber)
+    ) {
+      await addLabel(issueNumber, 'humanization-warning');
+    }
   } catch (err) {
     if (err instanceof PipelineError) {
       logError(`redraft failed at ${err.stage}`, { message: err.message });

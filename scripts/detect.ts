@@ -197,9 +197,15 @@ async function main(): Promise<void> {
     try {
       const result = await runPipeline({ slug: candidate.slug });
       const url = `https://funded.honeycombcredit.com/${result.slug}`;
-      await stage(`✅ Published — ${url}`, { commit: result.commitSha });
+      await stage(`✅ Published — ${url}`, {
+        commit: result.commitSha,
+        attempts: result.attempts,
+      });
       summary.generated.push(result.slug);
       await addLabel(issue.number, 'published');
+      if (result.humanizationWarnings) {
+        await addLabel(issue.number, 'humanization-warning');
+      }
       await closeIssue(issue.number, 'completed');
     } catch (err) {
       const reason = err instanceof PipelineError ? `${err.stage}: ${err.message}` : (err as Error).message;

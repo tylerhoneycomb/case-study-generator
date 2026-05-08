@@ -5,22 +5,43 @@
 //
 // Stages, each posted to the tracking issue (when one is set):
 //   1. Fetch detail from invest.honeycombcredit.com
-//   2. Call Claude
-//   3. Run humanization validator
+//   2. Call Claude (retried once if humanization fails)
+//   3. Run humanization validator (retry-on-fail, then publish-regardless)
 //   4. Fetch + store hero image
 //   5. Write MDX
 //   6. git add + commit
 // =============================================================================
 
 import { fetchCampaign, campaignUrl as buildCampaignUrl, isCampaignSuccessful, extractHeroImageUrl } from './scrape.js';
-import { generateCaseStudy, type InputPayload } from './claude.js';
-import { validateCopy, stripHtml, formatIssuesForReviewer } from './humanize.js';
+import { generateCaseStudy, type InputPayload, type GenerateResult } from './claude.js';
+import {
+  validateCopy,
+  stripHtml,
+  formatIssuesForReviewer,
+  type HumanizationIssue,
+} from './humanize.js';
 import { fetchAndStoreHeroImage } from './image.js';
 import { writeCaseStudy } from './mdx.js';
 import * as git from './git.js';
 import { stage, info, warn } from './log.js';
 import { formatMoney, formatPercent, formatTimeToFund, todayISO } from './format.js';
 import type { Campaign } from './schemas.js';
+
+// Humanization retry policy. The validator runs after every Claude
+// response. On the first failure we re-call Claude once with the validator's
+// flagged issues spliced into redraftFeedback so the model can correct the
+// targeted patterns. If the retry also fails, the pipeline publishes
+// anyway and the tracking issue gets a `humanization-warning` label
+// applied by the caller (generate/detect). Rationale: empirically a hard
+// gate left real funded campaigns with no published case study at all
+// (#39, #41); two-strikes-and-publish gives the model a feedback round
+// while bounding cost at ~2× per failure path.
+//
+// Note: prompts/case-study-prompt.md §13.5 still describes the validator
+// as a hard gate. That framing is intentional motivation for the model on
+// each attempt — the model is not aware of (and should not slack off on)
+// the system-level fallback below it.
+const MAX_HUMANIZATION_ATTEMPTS = 2;
 
 export interface RunOptions {
   // Honeycomb campaign slug — what fetchCampaign() looks up.
@@ -42,10 +63,17 @@ export interface RunResult {
   slug: string;
   publishedPath: string;
   imagePath: string;
+  // Sum across all Claude attempts (1 on clean run, 2 on retry path).
   estimatedCostUsd: number;
   inputTokens: number;
   outputTokens: number;
   commitSha: string;
+  // Number of Claude attempts the pipeline made (1 or MAX_HUMANIZATION_ATTEMPTS).
+  attempts: number;
+  // Present when the final draft still failed humanization and was
+  // published anyway. Callers should apply a `humanization-warning`
+  // label so the published-but-flagged pages are discoverable.
+  humanizationWarnings?: HumanizationIssue[];
 }
 
 export class PipelineError extends Error {
@@ -95,9 +123,12 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     );
   }
 
-  // ---- 2. Call Claude ----
-  await stage('🧠 Generating content (Claude API)');
-  const payload: InputPayload = {
+  // ---- 2 + 3. Call Claude → validate → retry once on humanization fail ----
+  // After MAX_HUMANIZATION_ATTEMPTS the pipeline publishes whatever the
+  // last attempt produced. The caller is responsible for surfacing
+  // `humanizationWarnings` in the RunResult (e.g. by applying a
+  // `humanization-warning` label).
+  const basePayload: InputPayload = {
     campaignName: campaign.campaignName,
     campaignSlug: campaign.slug,
     campaignId: campaign.campaignId,
@@ -117,45 +148,93 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     // (Note: extractHeroImageUrl is the source of truth for the hero image
     // path used to fetch and store the asset; the input payload above is
     // just the model's signal, not the fetch source.)
-    ...(opts.feedback !== undefined ? { redraftFeedback: opts.feedback } : {}),
   };
 
-  let claude;
-  try {
-    claude = await generateCaseStudy(payload);
-  } catch (err) {
-    throw new PipelineError('claude', (err as Error).message);
-  }
+  let claude: GenerateResult | null = null;
+  let humanizationWarnings: HumanizationIssue[] | undefined;
+  let attempts = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let totalCostUsd = 0;
+  let attemptFeedback = opts.feedback;
 
-  await stage(`✅ Claude returned. Cost: $${claude.usage.estimatedCostUsd.toFixed(3)}`, {
-    inputTokens: claude.usage.inputTokens,
-    outputTokens: claude.usage.outputTokens,
-  });
+  for (let attempt = 1; attempt <= MAX_HUMANIZATION_ATTEMPTS; attempt++) {
+    attempts = attempt;
+    const isRetry = attempt > 1;
 
-  // ---- 3. Humanization (hard gate) ----
-  // The validator is a circuit breaker, not a warning system. A flagged
-  // generation does NOT publish — we throw PipelineError(humanize) and the
-  // tracking issue gets the `error` label. The model is expected to clear
-  // the rules on first pass; the rules themselves are embedded in the
-  // runtime prompt via humanization-rules.ts substitutions.
-  const plain = stripHtml(claude.output.story);
-  const human = validateCopy(plain);
-  if (!human.passed) {
+    await stage(
+      isRetry
+        ? `🔁 Re-generating after humanization failure (attempt ${attempt} of ${MAX_HUMANIZATION_ATTEMPTS})`
+        : '🧠 Generating content (Claude API)',
+    );
+
+    const attemptPayload: InputPayload = {
+      ...basePayload,
+      ...(attemptFeedback !== undefined ? { redraftFeedback: attemptFeedback } : {}),
+    };
+
+    try {
+      claude = await generateCaseStudy(attemptPayload);
+    } catch (err) {
+      throw new PipelineError('claude', (err as Error).message);
+    }
+
+    totalInputTokens += claude.usage.inputTokens;
+    totalOutputTokens += claude.usage.outputTokens;
+    totalCostUsd += claude.usage.estimatedCostUsd;
+
+    await stage(`✅ Claude returned. Cost: $${claude.usage.estimatedCostUsd.toFixed(3)}`, {
+      inputTokens: claude.usage.inputTokens,
+      outputTokens: claude.usage.outputTokens,
+    });
+
+    const plain = stripHtml(claude.output.story);
+    const human = validateCopy(plain);
+    if (human.passed) {
+      await stage(isRetry ? '✅ Humanization passed on retry' : '✅ Humanization passed');
+      humanizationWarnings = undefined;
+      break;
+    }
+
     const flags = human.issues.map((i) => i.type).join(', ');
     const issuesText = formatIssuesForReviewer(human.issues);
-    warn('Humanization validator blocked generation', {
-      issues: human.issues.map((i) => i.type),
-    });
-    await stage('❌ Humanization validator blocked generation — not publishing', {
-      issueCount: human.issues.length,
+
+    if (attempt < MAX_HUMANIZATION_ATTEMPTS) {
+      warn('Humanization validator failed; retrying with feedback', {
+        attempt,
+        flags: human.issues.map((i) => i.type),
+      });
+      await stage(
+        `⚠️ Humanization failed on attempt ${attempt} (${flags}) — retrying with validator feedback`,
+        { issueCount: human.issues.length, flags: human.issues.map((i) => i.type) },
+      );
+      const retryFeedback =
+        `Your previous draft failed the humanization validator. Produce a new draft that fixes every flagged issue while keeping the structure, voice, and grounded facts of the previous draft:\n\n${issuesText}`;
+      attemptFeedback = opts.feedback
+        ? `${opts.feedback}\n\n---\n\n${retryFeedback}`
+        : retryFeedback;
+      continue;
+    }
+
+    // Final attempt also failed — publish anyway and surface a warning.
+    humanizationWarnings = human.issues;
+    warn('Humanization validator failed after final attempt; publishing anyway', {
+      attempt,
       flags: human.issues.map((i) => i.type),
     });
-    throw new PipelineError(
-      'humanize',
-      `Humanization validator blocked generation (${flags}). The draft was discarded; no MDX was written. Details:\n\n${issuesText}`,
+    await stage(
+      `⚠️ Humanization still failing after ${MAX_HUMANIZATION_ATTEMPTS} attempts (${flags}) — publishing anyway. Review and consider redraft. Details:\n\n${issuesText}`,
+      {
+        issueCount: human.issues.length,
+        flags: human.issues.map((i) => i.type),
+      },
     );
   }
-  await stage('✅ Humanization passed');
+
+  if (!claude) {
+    // Unreachable: the loop assigns `claude` on attempt 1 or throws.
+    throw new PipelineError('claude', 'Pipeline state invariant violated: Claude result missing.');
+  }
 
   // ---- 4. Fetch + store hero image ----
   // extractHeroImageUrl priority chain (most stable → least stable):
@@ -250,9 +329,11 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     slug: outputSlug,
     publishedPath: written.path,
     imagePath: img.publicPath,
-    estimatedCostUsd: claude.usage.estimatedCostUsd,
-    inputTokens: claude.usage.inputTokens,
-    outputTokens: claude.usage.outputTokens,
+    estimatedCostUsd: totalCostUsd,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
     commitSha: sha,
+    attempts,
+    ...(humanizationWarnings !== undefined ? { humanizationWarnings } : {}),
   };
 }
