@@ -18,16 +18,16 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   08:13-UTC cron       │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
-       │                        │  → humanization validator → image fetch
-       └────────────┬───────────┘  → MDX commit → push.
-                    │
+       │                        │  → humanization validator (retry once on fail,
+       └────────────┬───────────┘    then publish regardless) → image fetch
+                    │               → MDX commit → push.
                     ▼
        ┌────────────────────────┐  deploy.yml — Astro build, GitHub Pages deploy.
        │   site rebuild         │  Live within ~2 min of any commit to main.
@@ -52,7 +52,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 58-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +62,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (58 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -99,7 +99,9 @@ scripts/
     posthog.ts            ← HogQL client — discovery source for funded slugs
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
-    humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
+    humanize.ts           ← AI-tells regex validator
+    humanization-rules.ts ← single source of truth for banned phrases, density thresholds,
+                            and prompt substitutions — both humanize.ts and claude.ts read here
     ratelimit.ts          ← 3/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
@@ -109,7 +111,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 08:13 UTC daily
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -125,7 +127,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 08:13-UTC cron run after PR #29; appended thereafter |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -139,6 +141,12 @@ Three layered Zod schemas, each gating a different boundary:
 
 When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches it — defensive parsing with explicit field-presence checks.
 
+### Humanization validator
+
+The pipeline runs a regex-based validator (`scripts/lib/humanize.ts`) against every Claude draft to catch AI-writing tells before publishing. Rules — banned phrases, density thresholds, and the prompt substitutions that teach the model the same rules — are the sole responsibility of `scripts/lib/humanization-rules.ts`. Editing that one file updates both the validator and the prompt automatically.
+
+**Retry policy (as of #45):** On the first validation failure, the pipeline re-calls Claude once with the flagged issues spliced into the prompt as corrective feedback. If the retry also fails, the pipeline publishes anyway and adds a `humanization-warning` label to the tracking issue so the copy can be reviewed and redrafted. A hard gate that blocked publication entirely was abandoned after it left real funded campaigns with no published case study (#39, #41).
+
 ## Cost and rate model
 
 | Item | Cost |
@@ -148,7 +156,7 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
 
-Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
+Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Candidates that exceed the daily cap are silently deferred to the next cron run and counted in the `.state/detection-log.md` row; no tracking issue is opened for them.
 
 ## Known gaps
 
