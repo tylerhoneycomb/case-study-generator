@@ -120,7 +120,16 @@ Honeycomb's brand voice is **disruptive, approachable, trustworthy.** In practic
 - Similarly avoid the brand framing "not just a financial transaction" in generated copy — the "not just X but Y" pattern is blocked. Rephrase.
 - Don't flatter the reader. No "savvy entrepreneurs like you." They know.
 
-**ctaText examples by industry context** — these should feel like a sentence the reader in that industry might actually say out loud.
+**ctaText — pick by use-of-proceeds first, then by industry as fallback.** Read `useOfProceeds` and pick the CTA that matches what the money actually went toward, not what category the business belongs to. A jerky producer raising for a USDA facility purchase gets a facility-upgrade CTA, not a production-run CTA.
+
+| `useOfProceeds` signal | Good ctaText |
+|---|---|
+| Facility purchase, equipment, kitchen build-out, real estate | `Fund your next facility upgrade` |
+| Inventory, working capital, production run | `Fund your next production run` |
+| Marketing, rebrand, new product line, location expansion | `Fund your next growth push` |
+| Refinancing existing debt, debt consolidation | `See how a community loan could refinance your debt` |
+
+If the use of proceeds doesn't fit any of the above, fall back to the industry default:
 
 | Industry / niche | Good ctaText |
 |---|---|
@@ -152,7 +161,7 @@ Open on a specific scene, person, or moment from the business. Not abstract fram
 
 The opening should put the reader *inside* the business — at the kitchen counter, the shop floor, the farmers' market table, the moment a particular decision was made. Like they walked in.
 
-**Word count vs. grounding.** 800–1,200 is a target. Section 13's grounding rule overrides it. If the input `summary` is thin, do not pad to 800 by inventing color — a 650-word grounded story is acceptable and will still rank.
+**Word count vs. grounding.** 800–1,200 is the typical range, not a fixed window. Length should follow source density. Thinly-sourced pages (no founder quotes, sparse summary, no specific timeline) may run 600–800 — every line grounded beats a padded 1,000. Well-sourced pages (named founders, specific scenes, documented decision moments) may run up to 1,400 if the material earns it. Do not pad to hit a number; do not truncate strong material to stay under one. Section 13's grounding rule overrides the range in either direction.
 
 **Beat 2 — The business and the stakes (approx. 250 words). No heading inside `story` — this beat follows directly after Beat 1's opening paragraph and sits under `storyHeading` (which is a separate output).**
 Who the owner is. What the business is, concretely. How long it has been going. Scale (farmers' market booth, single storefront, two trucks, 4,000 units a month — whatever the input supports). Then the tension: what needed to change, and what traditional options were unavailable or wrong. Banks said no. Terms were hostile. Equity was non-negotiable. Growth required capital the business could not internally generate. Stay grounded in what the `summary` and `useOfProceeds` actually say.
@@ -183,6 +192,7 @@ The concrete numbers: amount raised, number of investors, time to fund. Draw at 
 - **Oversubscribed (`raisedAmount` ≥ `goalAmount` × 1.0, especially ≥ 1.1×).** The goal is narrative. "Closed at 133 percent of goal in 21 days" is one of the strongest hooks the genre has. Use it in `h1Heading`, `heroSubhead`, and body where it fits.
 - **Funded at or near goal.** The goal can appear matter-of-factly in the body. Headlines lead with the raised amount and investor count, not the percentage.
 - **Funded below goal (`raisedAmount` < `goalAmount` but the campaign closed successfully).** The goal and the gap exist as page data and may appear matter-of-factly in the body if it serves the story. They are NOT the headline subject. `h1Heading`, `heroSubhead`, `storyHeading`, `metaTitle`, `metaDescription`, and `ogTitle` / `ogDescription` are about *what got built*, not about the gap. Body must not frame the close as a shortfall, a clearance of a minimum, or anything requiring the reader to weigh whether it counts. Lead with the dollar amount raised, the investor count, and what that capital enables.
+- **Below the funding minimum — money returned (raise did not close).** This is a distinct case from "funded below goal." Reg CF is all-or-nothing above the funding minimum; if the raise did not clear it, no loan was issued and pledged funds were returned to investors. **The lede must state this explicitly.** Open the story by naming the outcome — the raise did not clear the minimum, investors were returned their funds — and then tell the story of what the business was trying to do and what it does next. Do not bury the outcome two paragraphs in. Do not frame it as a near-miss success.
 
 **Beat 5 — What the money did (approx. 200 words). No heading needed, unless the story naturally calls for it.**
 What the funds went toward, drawn from `useOfProceeds`. What the business is doing now that it could not do before. End on a human note, not a CTA — the in-page CTA blocks do the action-driving. The last line should land on the business or its community, not on Honeycomb.
@@ -191,6 +201,7 @@ What the funds went toward, drawn from `useOfProceeds`. What the business is doi
 - *Cadence padding:* "more X, more Y, more Z." Closings of the shape "more jars, more demos, more shelves" or "more accounts, more customers, more growth" signal that the writer ran out of substance and reached for sound. Also flagged by the tricolon density check.
 - *Sales-copy pivot:* "Ready to fund your own raise?", "Could this work for you?", or any second-person sales question. The CTA blocks below the story handle the call to action; the story ends on the business.
 - *Generic recap:* "And that, in the end, is the story of X." The reader just finished the story — don't summarize it back at them.
+- *The "next twelve months" closer.* Any sentence in the final paragraph of the shape "the next twelve months are the test," "the next year is the work," "the next twelve months are what the business is now living with." This construction has become the default closer across the corpus and now reads as a signature. If the work the business is doing genuinely has a 12-month horizon, name *what* — a specific milestone, a date, a piece of equipment landing, a store opening — not the duration.
 
 **Endings that work.** The strongest closings land on something specific the reader hasn't yet seen — a particular store going live next month, a piece of equipment that arrived last week, the next concrete thing the business is working toward. Close a loop. Land on an image. When that kind of specific closing detail isn't available from the input, returning to the opening idea in compressed form is an acceptable fallback — a deliberate echo, not a paraphrase.
 
@@ -742,6 +753,8 @@ The first sentence of `story` must not begin with any of: {{HUMANIZATION_BANNED_
 - **Invented financial terms.** If `annualInterestRate` is null, do not say "at a competitive rate." Say "through a Honeycomb raise."
 - **Hype metrics.** No "the campaign exploded," "demand was overwhelming," "it took off." Let the numbers carry the weight.
 - **Sales-copy sign-offs.** Do not end the story with "Ready to fund your own raise?" or similar. The CTA blocks below the story do that job; the story ends on the business.
+- **Reader-address breaks.** Do not write sentences that step outside the narrative to address "the prospective borrower reading this," "the small-business owner weighing this," "the reader," or any second-person framing of who the audience is. Do not narrate why this case study is in the case-study set ("that outcome is part of why this story is here"). Do not editorialize about what "the discerning reader knows" or what "matters to the reader." Tell the story; trust the reader to extract the meaning. If a piece of context is load-bearing, put it in the narrative. If it isn't, cut it.
+- **SAT-essay framing.** "The half that argues for X. The half that argues against." "There are two ways to read this." These two-column dialectical constructions are essay-shaped, not story-shaped. Pick the truer reading and write it; don't perform the analysis for the reader.
 
 ### 12.6 Style tics to cut on sight
 
@@ -751,6 +764,16 @@ The first sentence of `story` must not begin with any of: {{HUMANIZATION_BANNED_
 - "Proves that..."
 - Three consecutive sentences that all start with a participle ("Opening the shop... Bringing the community... Turning customers...").
 - "This is a story about..." (it is; show, don't announce).
+
+**Signature constructions to drop — these appeared in 4+ of the 6 most-recent published pages and now read as template signatures rather than as observations:**
+
+- **"did not name a specific [bank / lender] in the campaign materials, but the structural mismatch was clear..."** — this is the prompt hedging around thin source data and has become the tell of that hedging. Per Section 13's no-hedge-filler rule, omit the absence rather than narrate it.
+- **"[N] households / investors / locals with a small financial reason to..."** — the "small financial reason" framing of investor advocacy is now a signature phrase. Find a different way to say what the investor's stake means (or just say what they're likely to do, without naming the reason).
+- **"past the funding minimum that lets a Honeycomb loan close"** — appeared verbatim or near-verbatim in 4 of 5 partial raises. Vary the wording every time, or skip the funding-minimum mention entirely per Section 6 Beat 4's outcome rules.
+- **"that is the bet"** / **"that is the [X]"** as a sentence-ending punch — this is the default cadence-closer and now sounds like one. Use a different rhetorical move.
+- **"the next twelve months [are the test / are the work / is what the business is now living with]"** — universal closer formula. Forbidden in the final paragraph; see Section 6 Beat 5.
+- **"keeps 100 percent of the equity"** / **"keeps the cap table whole"** — appears every time the debt-vs-equity comparison comes up. Say it differently each time, or compress to a clause that does the same work.
+- **Two-clause staccato closer** of the form "The kitchen is open. The 32 investors are out there. The new name is on the way." — this rhythm has become the only closing rhythm. Use it once per case study at most, and not at all in the final paragraph if the previous case study used it.
 
 ### 12.6.5 Contrastive examples — paired ❌ / ✅ rewrites
 
@@ -852,6 +875,8 @@ If a detail would help the story but is not in the input:
 - **Second choice:** write around it — describe the shape of something rather than invent a specific.
 - **Last resort:** omit that beat and shorten the story. An 850-word grounded story beats a 1,100-word story padded with invented color.
 
+**No hedge-filler.** When the input doesn't supply a detail, omit it. Do not write sentences of the form "the owner did not name a specific bank, but the structural mismatch was clear from the [businessType] and the [revenue profile]" or any close variant — that construction is now a signature tell of the prompt hedging around thin source data. If you don't know which bank, don't write a sentence about not knowing which bank; pick a different angle. The reader does not need the gap narrated.
+
 Cases requiring particular care:
 
 - **Founder backstory.** Use only what `summary` or `issuer.description` states. Never invent childhood, training, or motivation.
@@ -860,6 +885,7 @@ Cases requiring particular care:
 - **Outcomes.** `useOfProceeds` tells you what the business said they *would* do with the money. You may say "the funds went toward X." You may not say "the new kitchen is now serving Y customers a week" unless that is explicitly in the input.
 - **Investment structure.** The `investmentType` field may be `Debt`, `Revenue Share`, `Preferred Equity`, or another structure. Use the phrase *"fixed-rate, fixed-term community-funded loan"* only when `investmentType` is `Debt`. For `Revenue Share`, use *"community-funded revenue share offering"* or *"community-backed revenue share"*. For `Preferred Equity`, use *"community-funded preferred equity raise"* or *"community-backed raise"*. When in doubt, fall back to the neutral terms *"Honeycomb raise"* or *"community-funded raise"* — both are always accurate. Never describe a non-Debt offering as a loan. This is a compliance-adjacent error, not a style preference.
 - **Dates.** Use `campaignStartDate` and `campaignExpirationDate` to describe the raise window. Do not predict when a project will open unless the input gives a date.
+- **Location.** Use the `city` and `state` from the input payload verbatim in `h1Heading`, `metaTitle`, `metaDescription`, and the body's first mention. Do not substitute a nearby MSA or larger metro for the named city (e.g., do not write "Huntsville, AL" when the input says "Madison, AL," even if Madison is part of the Huntsville MSA). The header chip and structured-data fields render directly from the input — if the body names a different city, the page contradicts itself.
 
 ---
 
