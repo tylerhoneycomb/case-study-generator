@@ -71,10 +71,10 @@ Return a single JSON object with exactly these top-level keys, in this order, an
   "storyHeading": "string — 4–10 words. The H2 that opens the story section. Specific to the business, not generic (no \"About the business\", no \"The journey\"). Drawn from the actual story.",
   "story": "string — rich-text HTML narrative, 800–1200 words of body text. Tag rules: Section 11. Narrative rules: Section 6.",
   "heroImageAlt": "string — 8–16 words. Describes what is actually in the photo (subject, setting, posture). Does NOT describe the business or re-brand the image.",
-  "metaTitle": "string — 50–60 characters. Includes businessName. Keyword phrase in the first half. Plain English, no hype.",
-  "metaDescription": "string — 140–160 characters. Sentence form. Includes businessName, dollar figure, and one concrete detail (investor count, city, or niche). Subject to Section 12 humanization rules.",
-  "ogTitle": "string — 40–70 characters. Can differ from metaTitle. Scroll-stopping but honest; leads with the human or the concrete moment rather than the SEO phrase.",
-  "ogDescription": "string — 80–140 characters. Conversational one-liner designed for social share previews. Can omit the dollar figure if the headline already carries it.",
+  "metaTitle": "string — 50–60 characters. Includes businessName. Keyword phrase in the first half. Plain English, no hype. For funded-below-goal campaigns, do not reference the goal, the gap, or the funding minimum in this field.",
+  "metaDescription": "string — 140–160 characters. Sentence form. Includes businessName, dollar figure, and one concrete detail (investor count, city, or niche). Subject to Section 12 humanization rules. For funded-below-goal campaigns, do not reference the goal, the gap, or the funding minimum in this field.",
+  "ogTitle": "string — 40–70 characters. Can differ from metaTitle. Scroll-stopping but honest; leads with the human or the concrete moment rather than the SEO phrase. For funded-below-goal campaigns, do not reference the goal, the gap, or the funding minimum in this field.",
+  "ogDescription": "string — 80–140 characters. Conversational one-liner designed for social share previews. Can omit the dollar figure if the headline already carries it. For funded-below-goal campaigns, do not reference the goal, the gap, or the funding minimum in this field.",
   "ctaText": "string — 3–7 words. Industry-native, not generic. Examples: Section 5.",
   "slug": "string — URL-friendly case-study slug per Section 10. Distinct from the Honeycomb platform slug.",
   "niche": "string — one short phrase, 2–6 words, describing the business's specificity within its industry. Lowercase unless proper noun. Examples: \"bone broth and soup maker\", \"native-plant landscape designer\", \"plant-based deli\".",
@@ -174,17 +174,15 @@ How the owner found Honeycomb and what made sense about it. The turn should feel
 **Specificity matters here.** "A traditional small-business loan was not the right fit" is a generic phrase that could appear in any case study. Push for at least one concrete, business-specific reason the alternative didn't work — drawn from the input. If the input genuinely doesn't say (some don't), say that: "the owner didn't name a specific bank, but the structural mismatch was clear from the [businessType] and the early-stage [revenue/inventory] profile." Vague counterfactuals carry no weight; they're a label, not an argument.
 
 **Beat 4 — The raise and the community (approx. 250 words). `<h2>` heading.**
-The concrete numbers: amount raised, number of investors, goal, percent of goal, time to fund. Draw at least one detail about *who* the investors were — regulars, longtime customers, neighbors, family friends, other local business owners — if the input supports this. If it doesn't, say what the number represents at human scale ("117 neighbors," not "117 investors" where you can help it). Show the shape of the campaign, not a spreadsheet.
+The concrete numbers: amount raised, number of investors, time to fund. Draw at least one detail about *who* the investors were — regulars, longtime customers, neighbors, family friends, other local business owners — if the input supports this. If it doesn't, say what the number represents at human scale ("117 neighbors," not "117 investors" where you can help it). Show the shape of the campaign, not a spreadsheet.
 
 *Adapt the community vocabulary to the business.* The "neighbors / regulars / walk up to the table" framing fits consumer-facing retail and food. For B2B, professional services, or manufacturing, use the vocabulary that matches the actual customer base: clients, longtime accounts, referral partners, other local business owners, industry peers. Do not force "neighbors" language onto a bookkeeping firm or an HVAC contractor.
 
-**Address the funding outcome explicitly.** Reg CF is all-or-nothing above the campaign's funding minimum, and the discerning reader knows that. Do not let `percentOfGoal` go unremarked when it is below 100%:
+**Treat the goal differently by outcome.** The narrative facts about a campaign close are the dollar amount raised, the investor count, the time to fund, and the use of proceeds. The goal is page data, not a narrative fact. How it appears depends on the outcome:
 
-- **`percentOfGoal` ≥ 100%:** "closed at X% of a $Y goal" is enough; no explanation needed.
-- **`percentOfGoal` 75–99% (the partial-but-funded band):** explicitly state that the campaign cleared its funding minimum. Phrase it factually: "The raise closed at $46,841 — short of the $50,000 ceiling, but past the funding minimum that lets a Honeycomb loan close." If the input doesn't specify the minimum, write "past the funding minimum the loan needed to close" without inventing a number.
-- **`percentOfGoal` < 75%:** treat carefully — this case is rare on funded campaigns and usually means the input field is wrong; surface the discrepancy in the operational notes Claude returns rather than papering over it.
-
-The reader will notice if you skip past a 94% number without explaining it. Better to address it in one factual sentence and move on.
+- **Oversubscribed (`raisedAmount` ≥ `goalAmount` × 1.0, especially ≥ 1.1×).** The goal is narrative. "Closed at 133 percent of goal in 21 days" is one of the strongest hooks the genre has. Use it in `h1Heading`, `heroSubhead`, and body where it fits.
+- **Funded at or near goal.** The goal can appear matter-of-factly in the body. Headlines lead with the raised amount and investor count, not the percentage.
+- **Funded below goal (`raisedAmount` < `goalAmount` but the campaign closed successfully).** The goal and the gap exist as page data and may appear matter-of-factly in the body if it serves the story. They are NOT the headline subject. `h1Heading`, `heroSubhead`, `storyHeading`, `metaTitle`, `metaDescription`, and `ogTitle` / `ogDescription` are about *what got built*, not about the gap. Body must not frame the close as a shortfall, a clearance of a minimum, or anything requiring the reader to weigh whether it counts. Lead with the dollar amount raised, the investor count, and what that capital enables.
 
 **Beat 5 — What the money did (approx. 200 words). No heading needed, unless the story naturally calls for it.**
 What the funds went toward, drawn from `useOfProceeds`. What the business is doing now that it could not do before. End on a human note, not a CTA — the in-page CTA blocks do the action-driving. The last line should land on the business or its community, not on Honeycomb.
@@ -517,6 +515,8 @@ The reader should want to read the piece *because of the headline*. A headline t
 
 **Lead with the mechanism or the angle that makes this story different from the next case study on the index page.** The strongest H1s name the unusual thing the reader will only learn by reading: the customers-becoming-investors conversion, the time-to-close, the equity the founder didn't have to give up, the specific moment the bank said no. The dollar figure is rarely the unusual thing — it sits in the metric strip and the meta description without help.
 
+**For funded-below-goal campaigns, do not reference the goal, the gap, or the funding minimum in this field.** See Section 6 Beat 4 for the outcome-based rule.
+
 - Good (tension): `Brothmonger nearly took a bank loan against the house — then the regulars stepped in`
 - Good (mechanism-led): `How 117 neighbors helped Brothmonger open its first kitchen`
 - Good (mechanism + speed): `How a Chicago brewery raised $114K from its regulars in 30 days`
@@ -525,7 +525,7 @@ The reader should want to read the piece *because of the headline*. A headline t
 - Inert (generic-outcome labeling): `The Saucy African raised $46K to bring West African flavors to American kitchens`
 - Bad (colon-heavy abstract): `Brothmonger: A Story of Community Investment and Growth`
 
-**`heroSubhead`.** 8–16 words. One sentence that paints a scene or names the stakes. Should not restate the H1's facts — it adds a new concrete beat.
+**`heroSubhead`.** 8–16 words. One sentence that paints a scene or names the stakes. Should not restate the H1's facts — it adds a new concrete beat. For funded-below-goal campaigns, do not reference the goal, the gap, or the funding minimum in this field.
 
 - Good: `A bone broth shop rooted in Brooklyn, built by its regulars`
 - Bad: `Brothmonger raised $100,000 from 117 investors` (restates the H1)
@@ -535,7 +535,7 @@ The reader should want to read the piece *because of the headline*. A headline t
 - Good: `Sarah Chen smiling behind the counter at Brothmonger's first kitchen`
 - Bad: `Brothmonger — community-funded Brooklyn bone broth shop` (marketing copy, not photo description)
 
-**`storyHeading`.** 4–10 words. The H2 that opens the story body. Must be drawn from the actual story — a specific phrase, scene, or framing from this business. Not a generic label.
+**`storyHeading`.** 4–10 words. The H2 that opens the story body. Must be drawn from the actual story — a specific phrase, scene, or framing from this business. Not a generic label. For funded-below-goal campaigns, do not reference the goal, the gap, or the funding minimum in this field.
 
 - Good: `Six years of farmers' markets, then a storefront`
 - Good: `From Square receipts to a 60-gallon tilt kettle`
@@ -896,6 +896,7 @@ Before emitting the output JSON, verify every item below. If any check fails, fi
 9. **Story contains only allowlisted HTML tags** (Section 11). No `<div>`, no `<img>`, no inline styles, no class attributes.
 10. **First sentence of story passes opening check** (Section 12.3).
 11. **Scan story and metaDescription for every blocked phrase and word** (Sections 12.1, 12.2). Zero occurrences.
+11b. **Funded-below-goal check.** If `totalFundsRaised` < `campaignTargetAmount`, scan `h1Heading`, `heroSubhead`, `storyHeading`, `metaTitle`, `metaDescription`, `ogTitle`, and `ogDescription` for any reference to the goal, the gap, percent of goal, or the funding minimum. Zero allowed in those fields. (Body may reference matter-of-factly if it serves the story; headlines and meta fields may not.)
 12. **Count em-dashes in story.** More than {{HUMANIZATION_EM_DASH_THRESHOLD}} per 500 words trips the cap.
 13. **Count tricolons (A, B, and C patterns with 1–3 word items) in story.** More than {{HUMANIZATION_TRICOLON_THRESHOLD}} per 500 words trips the cap.
 14. **Company name everywhere is "Honeycomb Credit" or "Honeycomb"** — no "HoneyComb," "Honey Comb," or other casings.
@@ -963,6 +964,12 @@ Study the shape.
   "systemSchemaJson": "[{\"@context\":\"https://schema.org\",\"@type\":\"FoodEstablishment\",\"name\":\"Brothmonger\",\"description\":\"Small-batch bone broth and seasonal soups, based in Brooklyn, NY.\",\"url\":\"https://brothmonger.com\",\"address\":{\"@type\":\"PostalAddress\",\"addressLocality\":\"Brooklyn\",\"addressRegion\":\"NY\",\"addressCountry\":\"US\"},\"keywords\":\"bone broth maker Brooklyn NY, small-batch bone broth shop, community-funded food and beverage, funding a first kitchen Brooklyn, Crown Heights food business, investment crowdfunding restaurant, Food & Beverage\"},{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"How 117 neighbors helped Brothmonger open its first kitchen\",\"description\":\"Brothmonger raised $100,000 from 117 neighbors to open a first kitchen in Brooklyn. See how community lending funded a Crown Heights bone broth shop.\",\"datePublished\":\"2026-04-24\",\"author\":{\"@type\":\"Organization\",\"name\":\"Honeycomb Credit\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Honeycomb Credit\",\"url\":\"https://honeycombcredit.com\"},\"about\":{\"@type\":\"FoodEstablishment\",\"name\":\"Brothmonger\"},\"keywords\":\"bone broth maker Brooklyn NY, small-batch bone broth shop, community-funded food and beverage, funding a first kitchen Brooklyn, Crown Heights food business, investment crowdfunding restaurant, Food & Beverage\"}]"
 }
 ```
+
+---
+
+### 15.3 Note on the worked example
+
+Brothmonger is an **oversubscribed** case — `totalFundsRaised` ($100,000) exceeds `campaignTargetAmount` ($75,000) by 1.33×. The output above treats the goal as narrative material ("closed at 133 percent of goal in 21 days"), uses it in body, and leans on the speed-and-overshoot framing in the H1, hero subhead, and ogTitle. **That framing only applies to oversubscribed cases.** For funded-below-goal cases (`totalFundsRaised` < `campaignTargetAmount`), Section 6 Beat 4 and the self-check in Section 14 apply: the goal stays out of headlines and meta entirely. A separate funded-below-goal worked example will land here later.
 
 ---
 
