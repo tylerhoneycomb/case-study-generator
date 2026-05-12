@@ -18,15 +18,15 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │   two daily cron slots │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   04:47 + 11:23 UTC    │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
-       │                        │  → humanization validator → image fetch
-       └────────────┬───────────┘  → MDX commit → push.
+       │                        │  → humanization validator (up to 2 attempts)
+       └────────────┬───────────┘  → image fetch → MDX commit → push.
                     │
                     ▼
        ┌────────────────────────┐  deploy.yml — Astro build, GitHub Pages deploy.
@@ -52,7 +52,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +62,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -88,7 +88,7 @@ src/
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
   layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, SiteHeader, SiteFooter, …
 public/
   og/                     ← hero / OG images, one per case study
   CNAME                   ← funded.honeycombcredit.com
@@ -99,7 +99,8 @@ scripts/
     posthog.ts            ← HogQL client — discovery source for funded slugs
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
-    humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
+    humanize.ts           ← AI-tells regex validator; runs after every Claude attempt
+    humanization-rules.ts ← single source of truth for banned phrases/openers/thresholds; consumed by both humanize.ts and the runtime prompt
     ratelimit.ts          ← 3/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
@@ -109,7 +110,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 04:47 UTC + 11:23 UTC daily (two slots for reliability)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -125,7 +126,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First detection-cron run after PR #29; appended on every run thereafter |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -139,6 +140,8 @@ Three layered Zod schemas, each gating a different boundary:
 
 When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches it — defensive parsing with explicit field-presence checks.
 
+A fourth validation layer runs after schema validation — the **humanization validator** in `scripts/lib/humanize.ts`. It checks the generated story body for AI-writing tells (banned vocabulary, hedge phrases, em-dash overuse, tricolon density, generic openers). The pipeline attempts up to **2 Claude calls per slug**: if the first draft fails humanization, a second call is made with the validator's issues fed back as feedback. If the second draft also fails, the pipeline publishes anyway and applies a `humanization-warning` label to the tracking issue for human review. The rules driving both the validator and the runtime prompt live in a single file (`scripts/lib/humanization-rules.ts`) so adding a banned word automatically updates both.
+
 ## Cost and rate model
 
 | Item | Cost |
@@ -148,7 +151,7 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
 
-Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
+Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Candidates that exceed the daily cap are silently deferred — they appear in the `.state/detection-log.md` heartbeat row as "rate-limit deferred" and will be picked up automatically by the next cron run (no `queued` label or separate issue is created).
 
 ## Known gaps
 
