@@ -18,15 +18,15 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │   two-slot daily cron  │  detect.yml — queries PostHog (Fivetran-mirrored
+       │  04:47 + 11:23 UTC     │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
-       │                        │  → humanization validator → image fetch
-       └────────────┬───────────┘  → MDX commit → push.
+       │                        │  → humanization validator (retry once on fail)
+       └────────────┬───────────┘  → image fetch → MDX commit → push.
                     │
                     ▼
        ┌────────────────────────┐  deploy.yml — Astro build, GitHub Pages deploy.
@@ -52,7 +52,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +62,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -99,7 +99,8 @@ scripts/
     posthog.ts            ← HogQL client — discovery source for funded slugs
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
-    humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
+    humanize.ts           ← AI-tells regex validator (rules sourced from humanization-rules.ts)
+    humanization-rules.ts ← single source of truth for banned phrases + density thresholds
     ratelimit.ts          ← 3/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
