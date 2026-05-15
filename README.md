@@ -12,21 +12,22 @@ the case studies live as MDX files in this repo.
 | **Live site** | https://funded.honeycombcredit.com |
 | **Operator portal** (you'll be here most of the time) | https://funded.honeycombcredit.com/admin |
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
-| **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
+| **Daily cron heartbeat** (no-email file log; two slots/day) | [`.state/detection-log.md`](.state/detection-log.md) |
 
 ## How it works
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │  two-slot daily cron   │  detect.yml — queries PostHog (Fivetran-mirrored
+       │  04:47 & 11:23 UTC     │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
-       │                        │  → humanization validator → image fetch
-       └────────────┬───────────┘  → MDX commit → push.
+       │                        │  → humanization validator (retries once with
+       └────────────┬───────────┘  validator feedback; publishes regardless on
+                    │              second failure) → image fetch → MDX commit → push.
                     │
                     ▼
        ┌────────────────────────┐  deploy.yml — Astro build, GitHub Pages deploy.
@@ -52,7 +53,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,18 +63,18 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
 
 ```bash
-npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
-npx tsx scripts/generate.ts <slug>           # ~$0.45 spend
-npx tsx scripts/redraft.ts <slug> --feedback="..."
-npx tsx scripts/delete.ts <slug>
+npx tsx scripts/inspect.ts <slug>                     # diagnostic, no spend
+npx tsx scripts/generate.ts <slug> [--force]          # ~$0.45 spend; --force overwrites existing
+npx tsx scripts/redraft.ts <case-study-slug> --feedback="..."
+npx tsx scripts/delete.ts <case-study-slug>
 npx tsx scripts/backfill.ts --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
-npx tsx scripts/detect.ts [--dry-run]        # the cron entry point
+npx tsx scripts/detect.ts [--dry-run]                 # the cron entry point
 ```
 
 ## Repo layout
@@ -108,8 +109,8 @@ scripts/
     image.ts format.ts schemas.ts log.ts git.ts args.ts
 .github/
   workflows/
-    deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    deploy.yml            ← Astro build + Pages deploy; also dispatched by detect/comment/issue workflows
+    detect.yml            ← two-slot daily cron (04:47 UTC and 11:23 UTC)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -148,7 +149,7 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
 
-Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
+Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work is deferred: the cron silently skips candidates beyond the cap (they reappear on tomorrow's PostHog query since the campaign is still funded and unpublished); manual-triggered issues get a `queued` label for operator visibility and must be retried the next day via the portal or slash command.
 
 ## Known gaps
 
