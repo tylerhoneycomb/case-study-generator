@@ -87,8 +87,8 @@ const caseStudy = defineCollection({
 
       // ---------------------------------------------------------------------
       // Metrics. Numeric fields drive math; *Formatted fields drive display
-      // (Wix-era workaround preserved because the agent already produces them
-      // and they spare us a render-time formatter on every page).
+      // Pre-formatted display strings. The agent produces them at write time,
+      // which avoids a render-time formatter on every page.
       // ---------------------------------------------------------------------
       amountRaised: z.number().int().nonnegative(),
       amountRaisedFormatted: z.string(),
