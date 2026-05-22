@@ -18,15 +18,16 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │   dual-slot daily cron │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   04:47 + 11:23 UTC    │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │   (detect.yml)         │  filters out already-published, newest first.
+       └────────────┬───────────┘
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
-       │                        │  → humanization validator → image fetch
-       └────────────┬───────────┘  → MDX commit → push.
+       │                        │  → humanization validator (2 attempts, then
+       └────────────┬───────────┘  publish-anyway) → image fetch → MDX commit → push.
                     │
                     ▼
        ┌────────────────────────┐  deploy.yml — Astro build, GitHub Pages deploy.
@@ -52,7 +53,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 58-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +63,15 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (58 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs env vars from `.env.example`. Copy to `.env` and fill in:
+- `ANTHROPIC_API_KEY` — required for generate/redraft/backfill
+- `GITHUB_TOKEN` — required for issue creation (generate, redraft, detect)
+- `POSTHOG_API_KEY` + `POSTHOG_PROJECT_ID` — required for `scripts/detect.ts`
+
+In CI all three are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
 
 ```bash
 npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
@@ -109,7 +115,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← dual-slot cron: 04:47 UTC + 11:23 UTC daily
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -125,9 +131,15 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron run after PostHog migration; appended on every run (both 04:47 UTC and 11:23 UTC slots) |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
+
+### Humanization retry
+
+The pipeline runs the humanization validator after every Claude generation. On the first failure it re-calls Claude once with the flagged issues injected as feedback. If the second attempt also fails, the case study is **published anyway** and the tracking issue gets a `humanization-warning` label so the page is easy to find for a manual redraft. This two-strikes-and-publish policy bounds cost at ~2× per failure path while ensuring real campaigns are never silently dropped. The prompt (`prompts/case-study-prompt.md` §13.5) still presents the validator as a hard gate — the model is not aware of the system-level fallback.
+
+### Validation gates
 
 Three layered Zod schemas, each gating a different boundary:
 
