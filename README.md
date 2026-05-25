@@ -12,16 +12,16 @@ the case studies live as MDX files in this repo.
 | **Live site** | https://funded.honeycombcredit.com |
 | **Operator portal** (you'll be here most of the time) | https://funded.honeycombcredit.com/admin |
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
-| **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
+| **Twice-daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
 
 ## How it works
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   twice-daily cron     │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
-                    │
+                    │              Slots: 04:47 UTC and 11:23 UTC.
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
@@ -52,7 +52,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +62,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -99,7 +99,9 @@ scripts/
     posthog.ts            ← HogQL client — discovery source for funded slugs
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
-    humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
+    humanize.ts           ← AI-tells regex validator
+    humanization-rules.ts ← single source of truth for banned phrases / density thresholds;
+                            feeds both the validator and the runtime prompt at call time
     ratelimit.ts          ← 3/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
@@ -109,13 +111,13 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 04:47 UTC and 11:23 UTC daily (two slots)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
     backfill.yml redraft-with-feedback.yml config.yml
 .state/
-  detection-log.md           ← daily cron heartbeat (one row per run)
+  detection-log.md           ← twice-daily cron heartbeat (one row per run)
   ratelimit.json             ← today's generation counter
 prompts/
   case-study-prompt.md  ← runtime prompt sent to Claude on every generation
@@ -125,7 +127,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Twice-daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron run after PostHog migration; appended on every subsequent run |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -138,6 +140,10 @@ Three layered Zod schemas, each gating a different boundary:
 | `scripts/lib/schemas.ts` `CampaignSchema` | Honeycomb scrape payload | Scrape fails, tracking issue gets `error` label |
 
 When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches it — defensive parsing with explicit field-presence checks.
+
+### Humanization retry policy
+
+The pipeline runs the humanization validator after each Claude response. On a first failure it retries Claude once with the flagged issues appended as feedback. If the retry also fails, the pipeline publishes anyway and applies a `humanization-warning` label to the tracking issue. The model is not aware of the system-level fallback (the prompt frames the validator as a hard gate to motivate clean first-pass copy), but operators should review any issue carrying that label and consider a `/funded redraft <slug>` with targeted feedback.
 
 ## Cost and rate model
 
@@ -153,5 +159,5 @@ Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill iss
 ## Known gaps
 
 - **Founder-level input data.** Current input payload (campaign summary + use-of-proceeds + metrics) doesn't include the founder's name, photo, or verbatim Q&A. The "Ask The Founders" tab on each campaign page would unlock this and is the single biggest quality lever still on the roadmap. See `prompts/case-study-prompt.md` §6 for what the prompt does to compensate today.
-- **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-3 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "3/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
+- **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-3 budget. In practice this hasn't caused over-spend (the cron runs twice per day but is idempotent — the second slot only spends if new transitions appeared after the first; backfill caps itself; manual ops are infrequent) but the documented "3/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
 - **Pre-2026 historical campaigns are not auto-published.** The PostHog detection query floors at `campaignexpirationdate >= '2026-01-01'`. ~570 historical funded campaigns are visible to PostHog but intentionally skipped by the cron — Tyler will hand-pick any he wants published via the Backfill Issue Form.
