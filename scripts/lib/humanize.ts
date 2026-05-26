@@ -1,12 +1,19 @@
 // =============================================================================
-// Humanization validator — circuit breaker for AI-writing tells.
+// Humanization validator — AI-writing tell detector.
 //
 // Detects common AI-writing tells in long-form copy. Regex-based floor, not
-// a semantic analyzer. Called by pipeline.ts as a hard gate: a flagged
-// generation does NOT publish — the pipeline throws PipelineError and the
-// tracking issue gets the `error` label. The model is expected to produce
-// clean copy on first pass; the validator's job is to refuse anything that
-// slips through.
+// a semantic analyzer. Called by pipeline.ts after every Claude response.
+//
+// Retry policy (see pipeline.ts):
+//   Attempt 1: generate normally, then validate.
+//   If validation fails: re-call Claude once with the flagged issues as
+//     targeted feedback (attempt 2).
+//   If attempt 2 also fails: publish anyway; caller applies a
+//     `humanization-warning` label to the tracking issue.
+//
+// This is a soft gate in practice. The runtime prompt (§13.5) still frames
+// the validator as a hard gate to motivate clean first-pass output — Claude
+// should not be aware of the publish fallback.
 //
 // All rules live in scripts/lib/humanization-rules.ts. That file is the
 // single source of truth — both this validator and the runtime prompt
