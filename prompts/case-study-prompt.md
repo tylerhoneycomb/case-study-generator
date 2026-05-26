@@ -31,32 +31,30 @@ Every narrative, SEO, and CTA choice on the page exists to serve this reader and
 
 ## 3. Input schema
 
-The user message that follows this prompt contains a single JSON object scraped from the closed campaign's `invest.honeycombcredit.com/campaigns/{slug}` page, plus an agent-injected `todayISO` field. Treat every value as the only source of ground truth you have about this business. If a field is missing or empty, do not invent a replacement.
+The user message that follows this prompt contains a single JSON object scraped from the closed campaign's `invest.honeycombcredit.com/campaigns/{slug}` page, plus agent-injected fields. Treat every value as the only source of ground truth you have about this business. If a field is missing or absent from the object, do not invent a replacement — follow the grounding rule in Section 13.
 
 ```json
 {
   "campaignName": "string — the display name of the campaign, e.g. \"Brothmonger\"",
-  "slug": "string — the Honeycomb URL slug, e.g. \"Brothmonger-Brooklyn-Bone-Broth\". Do NOT reuse this as the case-study slug.",
-  "issuer": {
-    "businessType": "string — broad industry category from Honeycomb's form, e.g. \"Food & Beverage\"",
-    "city": "string — e.g. \"Brooklyn\"",
-    "state": "string — two-letter abbrev, e.g. \"NY\"",
-    "description": "string — short business description the owner wrote",
-    "website": "string — URL, may be empty"
-  },
+  "campaignSlug": "string — the Honeycomb platform URL slug, e.g. \"Brothmonger-Brooklyn-Bone-Broth\". Do NOT reuse this as the case-study slug.",
+  "campaignId": "string — Honeycomb's internal campaign identifier. Use in systemSchemaJson @id if needed.",
+  "todayISO": "string — ISO date injected by the agent at call time, e.g. \"2026-04-24\". Use this in systemSchemaJson as datePublished.",
+  "city": "string — e.g. \"Brooklyn\"",
+  "state": "string — two-letter uppercase abbrev, e.g. \"NY\"",
   "summary": "string — HTML narrative the business wrote during their raise. Often 500–2000 words. May contain any HTML. Treat as primary factual source for the story.",
-  "useOfProceeds": "string — what the business said they would spend the money on",
+  "useOfProceeds": "string — what the business said they would spend the money on (optional, may be absent)",
+  "issuerDescription": "string — short business description the owner wrote on the Honeycomb platform (optional, may be absent)",
+  "issuerWebsite": "string — business website URL (optional, may be absent or empty)",
+  "ogImageUrl": "string — canonical OG/hero image URL for the campaign (optional, may be absent). Use in systemSchemaJson `image` fields when present.",
   "totalFundsRaised": "number — e.g. 100000",
-  "campaignTargetAmount": "number — the goal, e.g. 75000",
+  "campaignTargetAmount": "number — the fundraising goal, e.g. 75000",
   "numInvestors": "number — e.g. 117",
   "campaignStartDate": "string — ISO date, e.g. \"2025-10-14\"",
-  "campaignExpirationDate": "string — ISO date, e.g. \"2025-11-04\"",
-  "investmentType": "string — e.g. \"Debt\"",
-  "annualInterestRate": "number or null — e.g. 10",
-  "loanDuration": "string or null — e.g. \"36 months\"",
-  "todayISO": "string — ISO date injected by the agent at call time, e.g. \"2026-04-24\". Use this in systemSchemaJson as datePublished."
+  "campaignExpirationDate": "string — ISO date, e.g. \"2025-11-04\""
 }
 ```
+
+> **Note on investment structure fields.** `investmentType`, `annualInterestRate`, and `loanDuration` are not currently included in the input payload. When absent, default to neutral terms — "Honeycomb raise" or "community-funded raise" — rather than loan-specific language. See Section 13 for the full grounding rule on investment structure.
 
 ---
 
@@ -883,7 +881,7 @@ Cases requiring particular care:
 - **Investor identities.** You may describe investors as "regulars," "neighbors," "customers," "local families," etc. *only* if `summary` or `issuer.description` supports that characterization. If the input is silent on who the investors were, say "117 investors" and move on.
 - **Quotes.** See Section 12.5. Never fabricate.
 - **Outcomes.** `useOfProceeds` tells you what the business said they *would* do with the money. You may say "the funds went toward X." You may not say "the new kitchen is now serving Y customers a week" unless that is explicitly in the input.
-- **Investment structure.** The `investmentType` field may be `Debt`, `Revenue Share`, `Preferred Equity`, or another structure. Use the phrase *"fixed-rate, fixed-term community-funded loan"* only when `investmentType` is `Debt`. For `Revenue Share`, use *"community-funded revenue share offering"* or *"community-backed revenue share"*. For `Preferred Equity`, use *"community-funded preferred equity raise"* or *"community-backed raise"*. When in doubt, fall back to the neutral terms *"Honeycomb raise"* or *"community-funded raise"* — both are always accurate. Never describe a non-Debt offering as a loan. This is a compliance-adjacent error, not a style preference.
+- **Investment structure.** The `investmentType` field (`Debt`, `Revenue Share`, `Preferred Equity`) is not currently included in the input payload (see §3 note). Default to the neutral terms *"Honeycomb raise"* or *"community-funded raise"* when the investment type is unknown — both are always accurate. If context clues in `summary` or `useOfProceeds` make the structure clear (e.g., the owner explicitly mentions "loan" or "revenue share"), you may use more specific language: *"fixed-rate, fixed-term community-funded loan"* for debt raises, *"community-funded revenue share offering"* for revenue share, *"community-funded preferred equity raise"* for equity. Never describe a non-Debt offering as a loan on contextual evidence alone — when in doubt, use neutral terms. This is a compliance-adjacent rule, not a style preference.
 - **Dates.** Use `campaignStartDate` and `campaignExpirationDate` to describe the raise window. Do not predict when a project will open unless the input gives a date.
 - **Location.** Use the `city` and `state` from the input payload verbatim in `h1Heading`, `metaTitle`, `metaDescription`, and the body's first mention. Do not substitute a nearby MSA or larger metro for the named city (e.g., do not write "Huntsville, AL" when the input says "Madison, AL," even if Madison is part of the Huntsville MSA). The header chip and structured-data fields render directly from the input — if the body names a different city, the page contradicts itself.
 
@@ -948,25 +946,21 @@ Study the shape.
 ```json
 {
   "campaignName": "Brothmonger",
-  "slug": "Brothmonger-Brooklyn-Bone-Broth",
-  "issuer": {
-    "businessType": "Food & Beverage",
-    "city": "Brooklyn",
-    "state": "NY",
-    "description": "Small-batch bone broth and seasonal soups, sold at the Grand Army Plaza Greenmarket since 2018.",
-    "website": "https://brothmonger.com"
-  },
+  "campaignSlug": "Brothmonger-Brooklyn-Bone-Broth",
+  "campaignId": "cmp_brothmonger_001",
+  "todayISO": "2026-04-24",
+  "city": "Brooklyn",
+  "state": "NY",
+  "issuerDescription": "Small-batch bone broth and seasonal soups, sold at the Grand Army Plaza Greenmarket since 2018.",
+  "issuerWebsite": "https://brothmonger.com",
+  "ogImageUrl": "https://storage.googleapis.com/honeycomb-uploads/brothmonger-hero.jpg",
   "summary": "<p>Brothmonger started in 2018 as a folding table at the Grand Army Plaza Greenmarket. Sarah Chen cooked everything out of a rented commissary kitchen in Gowanus and loaded Cambros into her station wagon every Saturday morning. The menu was two flavors at first: a 24-hour chicken and a 48-hour beef.</p><p>Six years in, the business had regulars who brought friends, friends who brought coworkers, and a growing list of wholesale accounts — yoga studios, a hospital cafeteria, two specialty grocers in Brooklyn. The commissary was the constraint. We could not grow wholesale without our own kitchen, and we could not keep up with our own retail demand in someone else's kitchen either.</p><p>We talked to two banks. Neither wanted to underwrite a business whose books lived largely on Square and Stripe. We did not want to give up equity. We wanted to stay ours.</p><p>A longtime regular told us about Honeycomb. The pitch made sense immediately — raise capital from the people who already buy broth every Saturday, pay them back with interest, keep the business whole. We launched in October 2025 and closed the raise in 21 days at $100,000 against a $75,000 goal, with 117 investors. Two of them have been regulars since 2019.</p><p>The money is going toward a lease and build-out of our first kitchen in Crown Heights, commercial equipment, and initial inventory for the expanded wholesale program.</p>",
   "useOfProceeds": "Lease deposit and build-out for first dedicated kitchen in Crown Heights; commercial stock pots, a 60-gallon tilt kettle, and walk-in refrigeration; initial wholesale inventory.",
   "totalFundsRaised": 100000,
   "campaignTargetAmount": 75000,
   "numInvestors": 117,
   "campaignStartDate": "2025-10-14",
-  "campaignExpirationDate": "2025-11-04",
-  "investmentType": "Debt",
-  "annualInterestRate": 10,
-  "loanDuration": "36 months",
-  "todayISO": "2026-04-24"
+  "campaignExpirationDate": "2025-11-04"
 }
 ```
 
