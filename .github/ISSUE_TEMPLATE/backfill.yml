@@ -36,5 +36,5 @@ body:
     id: rate
     attributes:
       label: "Rate override (per day, 1-10)"
-      description: "Default is 3. Override applies only to this backfill operation."
-      placeholder: "3"
+      description: "Default is 1. Override applies only to this backfill operation."
+      placeholder: "1"
