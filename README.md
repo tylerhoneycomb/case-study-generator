@@ -100,7 +100,7 @@ scripts/
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
     humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
-    ratelimit.ts          ← 3/day default, 10/day backfill cap, UTC reset
+    ratelimit.ts          ← 1/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
     mdx.ts                ← MDX read/write, idempotency by campaignSlug
@@ -148,10 +148,10 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
 
-Rate limit: **3/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
+Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
 
 ## Known gaps
 
 - **Founder-level input data.** Current input payload (campaign summary + use-of-proceeds + metrics) doesn't include the founder's name, photo, or verbatim Q&A. The "Ask The Founders" tab on each campaign page would unlock this and is the single biggest quality lever still on the roadmap. See `prompts/case-study-prompt.md` §6 for what the prompt does to compensate today.
-- **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-3 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "3/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
+- **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-1 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "1/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
 - **Pre-2026 historical campaigns are not auto-published.** The PostHog detection query floors at `campaignexpirationdate >= '2026-01-01'`. ~570 historical funded campaigns are visible to PostHog but intentionally skipped by the cron — Tyler will hand-pick any he wants published via the Backfill Issue Form.

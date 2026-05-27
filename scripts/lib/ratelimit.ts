@@ -1,7 +1,7 @@
 // =============================================================================
 // Rate limit ledger — .state/ratelimit.json.
 //
-// Cap: 3 generations per UTC day across all triggers (cron + manual + backfill).
+// Cap: 1 generation per UTC day across all triggers (cron + manual + backfill).
 // Backfill operations may pass an override (capped at 10/day) for a single
 // run; the override applies only to that operation's check, not to other
 // callers within the same day.
@@ -17,7 +17,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 const STATE_FILE = path.resolve(process.cwd(), '.state/ratelimit.json');
-const DEFAULT_CAP = 3;
+const DEFAULT_CAP = 1;
 const HARD_MAX_OVERRIDE = 10;
 
 interface RateLimitState {

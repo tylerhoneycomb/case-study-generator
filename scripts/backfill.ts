@@ -6,7 +6,7 @@
 // via the Backfill issue form's "Slugs" textarea). Each slug:
 //   - skipped if MDX exists, unless --force
 //   - skipped under --dry-run after estimating cost
-//   - subject to rate-limit (default 3/day, --rate up to 10/day)
+//   - subject to rate-limit (default 1/day, --rate up to 10/day)
 //
 // On rate-limit hit, remaining slugs are surfaced in the tracking issue with
 // a `queued` label so the next day's run can pick them up.
