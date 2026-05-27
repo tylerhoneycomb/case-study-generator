@@ -11,7 +11,7 @@
 // Per Tyler:
 //   - Pre-Jan-2026 campaigns are filtered out at the query level. He'll
 //     hand-pick historical case studies via the Backfill Issue Form.
-//   - Jan-2026+ campaigns are processed newest-first, rate-limited at 3/day.
+//   - Jan-2026+ campaigns are processed newest-first, rate-limited at 1/day.
 //     A fresh transition is, by definition, the newest row, so it naturally
 //     cuts in line.
 //   - Tracking issues open AFTER the rate-limit gate. Candidates beyond the
