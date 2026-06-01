@@ -36,5 +36,5 @@ body:
     id: rate
     attributes:
       label: "Rate override (per day, 1-10)"
-      description: "Default is 3. Override applies only to this backfill operation."
+      description: "Leave blank to use the global default (1/day). Enter 3–10 to process more slugs per run. Override applies only to this backfill operation."
       placeholder: "3"

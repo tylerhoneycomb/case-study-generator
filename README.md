@@ -18,9 +18,10 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │  04:47 + 11:23 UTC     │  detect.yml — two daily slots; queries PostHog
+       │  daily cron            │  (Fivetran-mirrored postgres.campaigns) for funded
+       │  (detect.yml)          │  slugs ≥ 2026-01-01, filters already-published,
+       └────────────┬───────────┘  newest first. Idempotent; double-firing is safe.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -51,8 +52,8 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **Astro 5** + TypeScript (strict, `noUncheckedIndexedAccess`) + Tailwind + MDX content collections
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
-- **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.47 per case study)
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +63,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -143,7 +144,7 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 
 | Item | Cost |
 |---|---|
-| Generate or redraft | ~$0.45 per call (Opus 4.7, ~17K input + ~2.7K output tokens) |
+| Generate or redraft | ~$0.47 per call (Opus 4.7, ~17K input + ~2.8K output tokens) |
 | Inspect / delete / status | $0 |
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
