@@ -36,5 +36,5 @@ body:
     id: rate
     attributes:
       label: "Rate override (per day, 1-10)"
-      description: "Default is 3. Override applies only to this backfill operation."
+      description: "Default is 1 (the global daily cap). Override applies only to this backfill operation."
       placeholder: "3"
