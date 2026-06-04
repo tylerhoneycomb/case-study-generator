@@ -18,8 +18,8 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │  two-slot daily cron   │  detect.yml — queries PostHog (Fivetran-mirrored
+       │  04:47 + 11:23 UTC     │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
@@ -52,7 +52,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,18 +62,29 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `POSTHOG_API_KEY`, and `POSTHOG_PROJECT_ID` in env (copy `.env.example` to `.env`). In CI all are wired up via repo secrets.
 
 ```bash
-npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
-npx tsx scripts/generate.ts <slug>           # ~$0.45 spend
+# npm script aliases (package.json has shorthand for the most common ones)
+npm run inspect -- <slug>            # diagnostic, no spend
+npm run generate -- <slug>           # ~$0.45 spend
+npm run redraft -- <slug> --feedback="..."
+npm run delete -- <slug>
+npm run backfill -- --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
+npm run detect -- [--dry-run]        # the cron entry point
+
+# or with npx tsx directly
+npx tsx scripts/inspect.ts <slug>
+npx tsx scripts/generate.ts <slug>
 npx tsx scripts/redraft.ts <slug> --feedback="..."
 npx tsx scripts/delete.ts <slug>
 npx tsx scripts/backfill.ts --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
-npx tsx scripts/detect.ts [--dry-run]        # the cron entry point
+npx tsx scripts/detect.ts [--dry-run]
+npx tsx scripts/status.ts            # rate-limit status (no spend)
+npx tsx scripts/cost-estimate.ts     # estimate cost (no spend)
 ```
 
 ## Repo layout
@@ -109,7 +120,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← two-slot cron: 04:47 UTC + 11:23 UTC daily
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
