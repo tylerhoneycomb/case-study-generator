@@ -18,16 +18,22 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │   04:47 + 11:23 UTC    │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   cron (detect.yml)    │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
-                    │
+                    │               Two daily slots because GitHub Actions silently
+                    │               drops/delays single scheduled runs; the script is
+                    │               idempotent so double-firing costs nothing.
                     ▼
-       ┌────────────────────────┐  scripts/lib/pipeline.ts
-       │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
-       │                        │  → humanization validator → image fetch
-       └────────────┬───────────┘  → MDX commit → push.
-                    │
+       ┌────────────────────────┐  scripts/lib/pipeline.ts — 6 stages:
+       │   per-slug pipeline    │  1. Scrape invest.honeycombcredit.com
+       │                        │  2. Call Claude (prompts/case-study-prompt.md)
+       │                        │  3. Humanization validator (soft gate — retries
+       │                        │     once with feedback; publishes on 2nd failure
+       └────────────┬───────────┘     with humanization-warning label applied)
+                    │               4. Fetch + store hero image
+                    │               5. Write MDX frontmatter + body
+                    │               6. git add + commit
                     ▼
        ┌────────────────────────┐  deploy.yml — Astro build, GitHub Pages deploy.
        │   site rebuild         │  Live within ~2 min of any commit to main.
@@ -52,7 +58,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +68,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -109,7 +115,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 04:47 + 11:23 UTC daily (two slots)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -125,7 +131,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron run after the PostHog migration; appended on every run thereafter |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -139,6 +145,13 @@ Three layered Zod schemas, each gating a different boundary:
 
 When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches it — defensive parsing with explicit field-presence checks.
 
+**Humanization validator** (`scripts/lib/humanize.ts`) — a fourth gate, running after Claude returns. It detects AI-writing tells (banned phrases, blocked vocab, excessive em-dashes/tricolons, forbidden openers) against the generated `story` and `metaDescription`. This gate is a **soft gate with a retry**:
+
+1. If the first Claude attempt fails humanization, the pipeline calls Claude a second time with the validator's flagged issues injected as `redraftFeedback`.
+2. If the second attempt also fails, the pipeline publishes the page anyway and the tracking issue receives a `humanization-warning` label so it's discoverable for manual review.
+
+The rationale: a hard gate left some funded campaigns without a published case study at all. Two attempts bound the worst-case API spend to ~2× while giving the model a feedback round to correct targeted patterns.
+
 ## Cost and rate model
 
 | Item | Cost |
@@ -148,7 +161,11 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
 
-Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
+Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**.
+
+**Cron deferrals** — when the cron finds more eligible slugs than the daily cap allows, excess candidates are silently deferred. They appear in `.state/detection-log.md` (`rate-limit deferred` column) but no GitHub issues are opened for them. The next day's cron re-runs the same PostHog query; slugs that haven't been published yet are still eligible and will be processed in order.
+
+**Backfill deferrals** — when a backfill operation hits the rate limit mid-run, remaining slugs are posted as a comment on the originating issue and a `queued` label is applied, giving the operator a clear record of what to re-submit tomorrow.
 
 ## Known gaps
 
