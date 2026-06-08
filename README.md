@@ -18,10 +18,12 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   2× daily cron        │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
-                    │
+                    │              Runs at 04:47 UTC (00:47 EDT) and 11:23 UTC
+                    │              (07:23 EDT). Both slots are idempotent; the
+                    │              second rescues the day if the first is dropped.
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
@@ -46,13 +48,26 @@ All three converge on the same audit log (Issues tab) and use the same `scripts/
 
 The full operator README — quickstart, sharing access, costs, troubleshooting, "How it works" deep-dive — lives on the portal at `/admin`. It's collapsed under a `⚠ Read me first` block; click to expand. Send that URL to a coworker rather than this file.
 
+## Required GitHub Actions secrets
+
+Five repo secrets power the CI workflows (Settings → Secrets and variables → Actions):
+
+| Secret | Used by | Notes |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | detect, on-comment, on-issue | Generation API key |
+| `POSTHOG_API_KEY` | detect | Personal key with `project:query:read` |
+| `POSTHOG_PROJECT_ID` | detect | Numeric ID for "Honeycomb Credit Production" |
+| `GITHUB_TOKEN` | all workflows | Provided automatically by Actions; no manual setup needed |
+
+`GITHUB_TOKEN` is listed here for completeness. The other three require manual setup.
+
 ## Stack
 
 - **Astro 5** + TypeScript (strict, `noUncheckedIndexedAccess`) + Tailwind + MDX content collections
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,19 +77,32 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs the env vars below. Copy `.env.example` to `.env` and fill them in. In CI they are wired up via repo secrets.
+
+| Variable | Required | Notes |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | yes (generate/redraft/backfill) | Anthropic API key |
+| `GITHUB_TOKEN` | yes (scripts that open issues) | Personal access token with `issues:write`; CI uses `secrets.GITHUB_TOKEN` automatically |
+| `POSTHOG_API_KEY` | yes (detect) | Personal API key with `project:query:read` |
+| `POSTHOG_PROJECT_ID` | yes (detect) | Numeric PostHog project ID |
+| `POSTHOG_HOST` | no | Defaults to `https://us.posthog.com` (override for EU cloud) |
+| `CASE_STUDY_MODEL` | no | Defaults to `claude-opus-4-7`; try `claude-sonnet-4-6` for cheaper A/B runs |
+
+The npm scripts are thin wrappers around `tsx scripts/<name>.ts`:
 
 ```bash
-npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
-npx tsx scripts/generate.ts <slug>           # ~$0.45 spend
-npx tsx scripts/redraft.ts <slug> --feedback="..."
-npx tsx scripts/delete.ts <slug>
-npx tsx scripts/backfill.ts --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
-npx tsx scripts/detect.ts [--dry-run]        # the cron entry point
+npm run inspect -- <slug>                    # diagnostic, no spend
+npm run generate -- <slug>                   # ~$0.45 spend
+npm run redraft -- <slug> --feedback="..."
+npm run delete -- <slug>
+npm run backfill -- --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
+npm run detect -- [--dry-run]                # the cron entry point
 ```
+
+Or invoke directly with `npx tsx scripts/<name>.ts` if you prefer.
 
 ## Repo layout
 
@@ -109,7 +137,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron 04:47 UTC + 11:23 UTC (2× daily for resilience)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
