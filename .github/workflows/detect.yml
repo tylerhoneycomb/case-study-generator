@@ -7,22 +7,30 @@ name: Detect
 # detection-log row is appended on every run (including dry-run).
 
 on:
-  schedule:
-    # Two daily slots. GitHub Actions silently drops or delays scheduled
-    # workflows during high-load periods, and we cannot predict which slots
-    # will be hit on a given day. The script is idempotent — already-
-    # published campaigns are filtered out by `listAllCampaignSlugs()`
-    # before any rate-limit consumption — so running twice/day costs nothing
-    # when the first run lands cleanly, and rescues the day when it doesn't.
-    #
-    # Empirical track record (last 5 days):
-    #   12:07 UTC slot — fired within 30 min (1 sample)
-    #   08:13 UTC slot — fired 3+ hours late on 2 of 3 days, dropped on day 3
-    #
-    # 04:47 UTC = 00:47 EDT (overnight, low GH contention).
-    # 11:23 UTC = 07:23 EDT (mid-morning backup, off the :00/:30 spikes).
-    - cron: '47 4 * * *'
-    - cron: '23 11 * * *'
+  # ─── PAUSED ────────────────────────────────────────────────────────────
+  # Daily cron disabled per operator request (Tyler, 2026-06-09) to stop
+  # Anthropic API spend while the project is on hold. Both slots are
+  # commented out together; resume by uncommenting these lines.
+  # workflow_dispatch remains active so the cron can be re-armed
+  # one-off from the Actions tab without editing this file.
+  #
+  # schedule:
+  #   # Two daily slots. GitHub Actions silently drops or delays scheduled
+  #   # workflows during high-load periods, and we cannot predict which slots
+  #   # will be hit on a given day. The script is idempotent — already-
+  #   # published campaigns are filtered out by `listAllCampaignSlugs()`
+  #   # before any rate-limit consumption — so running twice/day costs nothing
+  #   # when the first run lands cleanly, and rescues the day when it doesn't.
+  #   #
+  #   # Empirical track record (last 5 days):
+  #   #   12:07 UTC slot — fired within 30 min (1 sample)
+  #   #   08:13 UTC slot — fired 3+ hours late on 2 of 3 days, dropped on day 3
+  #   #
+  #   # 04:47 UTC = 00:47 EDT (overnight, low GH contention).
+  #   # 11:23 UTC = 07:23 EDT (mid-morning backup, off the :00/:30 spikes).
+  #   - cron: '47 4 * * *'
+  #   - cron: '23 11 * * *'
+  # ───────────────────────────────────────────────────────────────────────
   workflow_dispatch:
     inputs:
       dry-run:
