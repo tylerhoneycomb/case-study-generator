@@ -1,27 +1,27 @@
 ---
 interface Props {
   amountRaisedFormatted: string;
-  goalAmountFormatted: string;
-  percentOfGoalFormatted: string;
   investorCount: number;
   timeToFund: string;
 }
 
-const { amountRaisedFormatted, goalAmountFormatted, percentOfGoalFormatted, investorCount, timeToFund } = Astro.props;
+const { amountRaisedFormatted, investorCount, timeToFund } = Astro.props;
 
-// Four-tile metric grid. Color-blocked per brand-guide style elements.
+// Three-tile metric grid. Color-blocked per brand-guide style elements.
 // First tile uses the dominant yellow; the rest sit on cream with black
 // hairline dividers, echoing the "color blocking with black lines" pattern.
+// Progress-to-goal was removed as a headline figure — the raise outcome
+// vs target now lives in the narrative when it carries weight (see
+// prompts/case-study-prompt.md §6 Beat 4 partial-funded handling).
 const tiles = [
   { label: 'Raised', value: amountRaisedFormatted, accent: 'bg-honeycomb-yellow' },
-  { label: 'Of goal', value: percentOfGoalFormatted, sub: `Goal ${goalAmountFormatted}`, accent: 'bg-honeycomb-cream' },
   { label: 'Investors', value: investorCount.toLocaleString(), accent: 'bg-honeycomb-cream' },
   { label: 'Time to fund', value: timeToFund, accent: 'bg-honeycomb-cream' },
 ];
 ---
 <section class="mx-auto max-w-5xl px-6 mt-10">
-  <div class="grid grid-cols-2 gap-px bg-honeycomb-ink/80 border border-honeycomb-ink/80 sm:grid-cols-4">
-    {tiles.map(({ label, value, sub, accent }) => (
+  <div class="grid grid-cols-1 gap-px bg-honeycomb-ink/80 border border-honeycomb-ink/80 sm:grid-cols-3">
+    {tiles.map(({ label, value, accent }) => (
       <div class={`flex flex-col gap-1 px-5 py-6 ${accent}`}>
         <span class="font-sans text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-ink/70">
           {label}
@@ -29,7 +29,6 @@ const tiles = [
         <span class="font-display text-3xl font-bold text-honeycomb-ink">
           {value}
         </span>
-        {sub && <span class="font-sans text-xs text-honeycomb-ink/70">{sub}</span>}
       </div>
     ))}
   </div>

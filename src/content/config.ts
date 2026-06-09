@@ -92,10 +92,6 @@ const caseStudy = defineCollection({
       // ---------------------------------------------------------------------
       amountRaised: z.number().int().nonnegative(),
       amountRaisedFormatted: z.string(),
-      goalAmount: z.number().int().positive(),
-      goalAmountFormatted: z.string(),
-      percentOfGoal: z.number().nonnegative(),
-      percentOfGoalFormatted: z.string(),
       investorCount: z.number().int().nonnegative(),
       // Free-form, agent-derived. Examples: "21 days", "under a week".
       timeToFund: z.string().min(1),

@@ -24,7 +24,7 @@ import { fetchAndStoreHeroImage } from './image.js';
 import { writeCaseStudy } from './mdx.js';
 import * as git from './git.js';
 import { stage, info, warn } from './log.js';
-import { formatMoney, formatPercent, formatTimeToFund, todayISO } from './format.js';
+import { formatMoney, formatTimeToFund, todayISO } from './format.js';
 import type { Campaign } from './schemas.js';
 
 // Humanization retry policy. The validator runs after every Claude
@@ -269,9 +269,7 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
   // rounding, the build fails Astro content validation and the deploy
   // never lands.
   const amountRaisedInt = Math.round(totalFundsRaised);
-  const goalAmountInt = Math.round(target);
   const investorsInt = Math.round(investors);
-  const percent = goalAmountInt > 0 ? (amountRaisedInt / goalAmountInt) * 100 : 0;
   const frontmatter = {
     businessName: campaign.campaignName,
     niche: claude.output.niche,
@@ -286,10 +284,6 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     ogImage: img.publicPath,
     amountRaised: amountRaisedInt,
     amountRaisedFormatted: formatMoney(amountRaisedInt),
-    goalAmount: goalAmountInt,
-    goalAmountFormatted: formatMoney(goalAmountInt),
-    percentOfGoal: Math.round(percent),
-    percentOfGoalFormatted: formatPercent(percent),
     investorCount: investorsInt,
     timeToFund: formatTimeToFund(start, end),
     metaTitle: claude.output.metaTitle,
