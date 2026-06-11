@@ -14,11 +14,16 @@ the case studies live as MDX files in this repo.
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
 | **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
 
+> **Status:** Daily cron is **paused** as of 2026-06-09 to stop Anthropic API spend
+> while the project is on hold. Manual triggers (portal, slash commands, issue forms)
+> still work. To resume the cron: uncomment the `schedule:` block in
+> `.github/workflows/detect.yml`.
+
 ## How it works
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -109,7 +114,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 04:47 + 11:23 UTC daily (currently paused)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
