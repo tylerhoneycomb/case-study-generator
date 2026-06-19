@@ -14,11 +14,13 @@ the case studies live as MDX files in this repo.
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
 | **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
 
+> ⚠ **Daily cron is currently paused.** Scheduled detection was disabled on 2026-06-09 to reduce Anthropic API spend while the project is on hold. To re-arm: uncomment the `schedule:` block in `.github/workflows/detect.yml` and push, or trigger a one-off run from the Actions tab via `workflow_dispatch`. The operator portal and slash commands remain fully functional.
+
 ## How it works
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily detection cron │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -51,8 +53,8 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **Astro 5** + TypeScript (strict, `noUncheckedIndexedAccess`) + Tailwind + MDX content collections
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
-- **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Anthropic SDK** with `claude-opus-4-7` for generation (~$0.45 per case study); override via `CASE_STUDY_MODEL` env var
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +64,18 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs the following env vars (copy `.env.example` as a starting point):
+
+| Variable | Required for | Supplied in CI via |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | all generation scripts | repo secret |
+| `GITHUB_TOKEN` | issue/comment creation | `secrets.GITHUB_TOKEN` (automatic) |
+| `POSTHOG_API_KEY` | `detect.ts` only | repo secret |
+| `POSTHOG_PROJECT_ID` | `detect.ts` only | repo secret |
+| `CASE_STUDY_MODEL` | optional model override | not set (defaults to `claude-opus-4-7`) |
 
 ```bash
 npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
@@ -88,7 +98,7 @@ src/
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
   layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  components/             ← Hero, MetricsStrip (3 tiles: Raised / Investors / Time to fund), Quote, Cta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
   CNAME                   ← funded.honeycombcredit.com
@@ -109,7 +119,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← daily detection cron (currently paused; see schedule: block)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -143,10 +153,12 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 
 | Item | Cost |
 |---|---|
-| Generate or redraft | ~$0.45 per call (Opus 4.7, ~17K input + ~2.7K output tokens) |
+| Generate or redraft (`claude-opus-4-7`, default) | ~$0.45 per call (~17K input + ~2.7K output tokens) |
+| Generate or redraft (`claude-sonnet-4-6`) | ~$0.09 per call (set `CASE_STUDY_MODEL=claude-sonnet-4-6`) |
+| Generate or redraft (`claude-haiku-4-5-20251001`) | ~$0.03 per call (lowest quality tier) |
 | Inspect / delete / status | $0 |
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
-| Steady state at ~10 funded campaigns/month | ~$5/month |
+| Steady state at ~10 funded campaigns/month | ~$5/month (default model) |
 
 Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
 

@@ -6,8 +6,9 @@
 // below. The agent assembles this payload from a scraped Campaign + today's
 // date and any caller-supplied feedback.
 //
-// Model: claude-opus-4-7 by default (latest as of 2026-04). Override via
-// the CASE_STUDY_MODEL env var if you want to A/B against another tier.
+// Model: claude-opus-4-7 by default. Override via the CASE_STUDY_MODEL env var
+// to use a different tier (claude-opus-4-8 is the latest Opus; claude-sonnet-4-6
+// costs ~5× less at some quality trade-off). Update PRICING below when changing.
 // =============================================================================
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -65,9 +66,9 @@ export interface ClaudeUsage {
   estimatedCostUsd: number;
 }
 
-// Pricing in USD per million tokens. Keep in sync with the active model.
-// Opus 4.7 (per anthropic.com/pricing): $15 input / $75 output per Mtok.
+// Pricing in USD per million tokens. Keep in sync with anthropic.com/pricing.
 const PRICING: Record<string, { input: number; output: number }> = {
+  'claude-opus-4-8': { input: 15, output: 75 },
   'claude-opus-4-7': { input: 15, output: 75 },
   'claude-sonnet-4-6': { input: 3, output: 15 },
   'claude-haiku-4-5-20251001': { input: 1, output: 5 },
