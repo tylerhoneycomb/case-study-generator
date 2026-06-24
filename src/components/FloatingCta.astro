@@ -1,0 +1,128 @@
+---
+// Floating / sticky CTA bar — business-owner recruitment, pinned to the top.
+//
+// Companion to Cta.astro (the static bottom-of-page CTA). Same destination and
+// the same UTM scheme, with ONE addition: utm_term=floating_bar, so clicks on
+// this bar can be told apart from the bottom CTA in analytics. Without that you
+// can't measure whether the floating bar actually earns its keep.
+//
+// NOT wired into CaseStudy.astro yet — this component exists so the floating
+// bar can be evaluated (see /demo/floating-cta.html) before it ships on every
+// live page. To roll it out, add one line to the layout right after <body>:
+//
+//   <FloatingCta campaignSlug={d.campaignSlug} />
+//
+// Behavior (matches the recommended variant in the demo):
+//   - Hidden on load; slides down once the reader scrolls past the hero, so it
+//     never competes with the H1 above the fold.
+//   - Dismissible. Dismissal is remembered for the browser session so it does
+//     not nag across pages.
+//   - position: fixed, so it pins to the viewport. The site header is not
+//     sticky, so by the time the bar reveals the header has scrolled away —
+//     they never overlap.
+
+const PRE_QUALIFY_BASE = 'https://start.honeycomb.credit/';
+
+interface Props {
+  /** Button label. */
+  ctaText?: string;
+  /** Honeycomb campaign slug — becomes utm_content, same as Cta.astro. */
+  campaignSlug: string;
+  /** Short lead line shown next to the button (hidden on small screens). */
+  message?: string;
+  /** Pixels scrolled before the bar reveals. Default clears a typical hero. */
+  revealAfter?: number;
+}
+
+const {
+  ctaText = 'Get prequalified today!',
+  campaignSlug,
+  message = 'Could your business raise like this?',
+  revealAfter = 600,
+} = Astro.props;
+
+function buildPreQualifyHref(slug: string): string {
+  const url = new URL(PRE_QUALIFY_BASE);
+  url.searchParams.set('utm_source', 'case_study');
+  url.searchParams.set('utm_medium', 'website');
+  url.searchParams.set('utm_campaign', 'success_stories');
+  url.searchParams.set('utm_content', slug);
+  // Distinguishes floating-bar clicks from the bottom CTA (which has no term).
+  url.searchParams.set('utm_term', 'floating_bar');
+  return url.toString();
+}
+
+const ctaHref = buildPreQualifyHref(campaignSlug);
+---
+<div
+  id="floating-cta"
+  data-reveal-after={revealAfter}
+  class="fixed inset-x-0 top-0 z-50 -translate-y-full transition-transform duration-300 ease-out motion-reduce:transition-none"
+  role="region"
+  aria-label="Get prequalified with Honeycomb Credit"
+>
+  <div class="bg-honeycomb-purple text-white shadow-[0_2px_12px_rgba(0,0,0,0.18)]">
+    <div class="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 sm:px-6">
+      <p class="min-w-0 flex-1 truncate text-sm leading-snug sm:whitespace-normal sm:text-base">
+        <span class="font-semibold">{message}</span>
+        <span class="hidden text-white/80 lg:inline"> See if you prequalify in about two minutes.</span>
+      </p>
+      <a
+        href={ctaHref}
+        class="shrink-0 whitespace-nowrap bg-honeycomb-yellow px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider text-honeycomb-ink no-underline transition-colors hover:bg-white sm:text-sm"
+      >
+        {ctaText}
+      </a>
+      <button
+        id="floating-cta-dismiss"
+        type="button"
+        aria-label="Dismiss"
+        class="-mr-1 shrink-0 rounded p-1 text-white/70 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+      >
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-5 w-5">
+          <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Reveal-on-scroll + session-scoped dismissal. Plain DOM, no framework.
+  const bar = document.getElementById('floating-cta');
+  const dismiss = document.getElementById('floating-cta-dismiss');
+  if (bar) {
+    const STORAGE_KEY = 'floating_cta_dismissed';
+    const revealAfter = Number(bar.dataset.revealAfter ?? '600');
+    let dismissed = false;
+    try {
+      dismissed = sessionStorage.getItem(STORAGE_KEY) === '1';
+    } catch {
+      // sessionStorage can throw in private/blocked contexts — fail open.
+    }
+
+    const show = () => bar.classList.remove('-translate-y-full');
+    const hide = () => bar.classList.add('-translate-y-full');
+
+    const onScroll = () => {
+      if (dismissed) return;
+      if (window.scrollY > revealAfter) show();
+      else hide();
+    };
+
+    dismiss?.addEventListener('click', () => {
+      dismissed = true;
+      hide();
+      try {
+        sessionStorage.setItem(STORAGE_KEY, '1');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    if (!dismissed) {
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    }
+  }
+</script>

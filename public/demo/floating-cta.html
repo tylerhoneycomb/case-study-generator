@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Floating CTA bar — preview · funded.honeycombcredit.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Raleway:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Mirror the production brand tokens (tailwind.config.mjs) so the preview
+    // matches the real site exactly.
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            honeycomb: {
+              yellow: '#FFDE17',
+              cream: '#F6F3E5',
+              purple: '#3F296B',
+              blue: '#D9ECFF',
+              green: '#59B16B',
+              ink: '#222222',
+            },
+          },
+          fontFamily: {
+            display: ['Raleway', 'system-ui', 'sans-serif'],
+            sans: ['"Open Sans"', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: 'Open Sans', system-ui, sans-serif; }
+    .display { font-family: 'Raleway', system-ui, sans-serif; }
+    /* Phone bezel for the mobile frame. */
+    .phone {
+      width: 390px;
+      border: 12px solid #1b1b1b;
+      border-radius: 40px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      background: #1b1b1b;
+    }
+    .phone iframe { display: block; border: 0; width: 100%; height: 720px; background: #fff; }
+    .desktop-frame {
+      border: 1px solid rgba(34, 34, 34, 0.18);
+      border-radius: 10px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+      background: #fff;
+    }
+    .desktop-chrome {
+      display: flex; align-items: center; gap: 6px;
+      background: #ececec; padding: 8px 12px; border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .desktop-chrome span { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+    .desktop-frame iframe { display: block; border: 0; width: 100%; height: 720px; background: #fff; }
+    .seg button.active { background: #3F296B; color: #fff; }
+    .seg button { transition: background .15s, color .15s; }
+  </style>
+</head>
+<body class="bg-honeycomb-cream text-honeycomb-ink">
+  <!-- ===================== Control surface ===================== -->
+  <header class="border-b border-honeycomb-ink/10 bg-white/80 backdrop-blur sticky top-0 z-10">
+    <div class="mx-auto max-w-6xl px-6 py-5">
+      <p class="text-xs font-bold uppercase tracking-[0.2em] text-honeycomb-purple">Internal preview · not indexed</p>
+      <h1 class="display mt-1 text-3xl font-bold">Floating CTA bar — &ldquo;Get prequalified today!&rdquo;</h1>
+      <p class="mt-2 max-w-3xl text-sm text-honeycomb-ink/70">
+        A sticky top bar layered onto a live case-study template (The Saucy African). Production pages are
+        unchanged — this is an evaluation mockup. Scroll inside either frame to see the reveal behavior;
+        tap the button or the &times; to test the link and dismiss.
+      </p>
+
+      <!-- Controls -->
+      <div class="mt-5 flex flex-wrap items-end gap-x-8 gap-y-4">
+        <div>
+          <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-honeycomb-ink/60">Style</p>
+          <div class="seg inline-flex overflow-hidden rounded border border-honeycomb-ink/25 text-sm font-semibold" data-group="variant">
+            <button class="active px-4 py-1.5" data-value="purple">Purple <span class="font-normal opacity-70">(rec.)</span></button>
+            <button class="px-4 py-1.5 border-l border-honeycomb-ink/25" data-value="yellow">Yellow</button>
+          </div>
+        </div>
+        <div>
+          <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-honeycomb-ink/60">Behavior</p>
+          <div class="seg inline-flex overflow-hidden rounded border border-honeycomb-ink/25 text-sm font-semibold" data-group="behavior">
+            <button class="active px-4 py-1.5" data-value="scroll">Reveal on scroll <span class="font-normal opacity-70">(rec.)</span></button>
+            <button class="px-4 py-1.5 border-l border-honeycomb-ink/25" data-value="always">Always visible</button>
+          </div>
+        </div>
+        <button id="reshow" class="rounded border border-honeycomb-ink/25 px-4 py-1.5 text-sm font-semibold hover:bg-honeycomb-ink hover:text-white">
+          Reset / re-show bar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== Preview frames ===================== -->
+  <main class="mx-auto max-w-6xl px-6 py-10">
+    <div class="flex flex-col items-start gap-12 lg:flex-row lg:items-start">
+      <!-- Desktop -->
+      <section class="w-full lg:flex-1">
+        <p class="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-ink/60">Desktop</p>
+        <div class="desktop-frame">
+          <div class="desktop-chrome">
+            <span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span>
+            <span class="ml-3 text-xs text-honeycomb-ink/50" style="width:auto;height:auto;border-radius:0;">funded.honeycombcredit.com/the-saucy-african</span>
+          </div>
+          <iframe id="frame-desktop" title="Desktop preview"></iframe>
+        </div>
+      </section>
+      <!-- Mobile -->
+      <section class="w-full lg:w-auto">
+        <p class="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-ink/60">Mobile (390px)</p>
+        <div class="phone mx-auto">
+          <iframe id="frame-mobile" title="Mobile preview"></iframe>
+        </div>
+      </section>
+    </div>
+
+    <p class="mt-10 max-w-3xl text-sm leading-relaxed text-honeycomb-ink/70">
+      <strong>Attribution note:</strong> the bar&rsquo;s button points at the same pre-qualify URL as the
+      bottom-of-page CTA, but adds <code class="bg-white px-1">utm_term=floating_bar</code> so its clicks can
+      be measured separately. That&rsquo;s the only way to know whether the bar earns its place.
+    </p>
+  </main>
+
+  <script>
+    // ---------------------------------------------------------------------
+    // Inner page generator. Builds a full case-study page (brand-accurate)
+    // with the floating bar baked in, then writes it into each iframe. Using
+    // document.write isolates `position: fixed` to the iframe viewport, so the
+    // bar pins correctly within each device frame.
+    // ---------------------------------------------------------------------
+    const state = { variant: 'purple', behavior: 'scroll' };
+
+    function barMarkup(variant) {
+      const shell = variant === 'yellow'
+        ? 'bg-honeycomb-yellow text-honeycomb-ink'
+        : 'bg-honeycomb-purple text-white';
+      const lead = variant === 'yellow' ? 'text-honeycomb-ink' : 'text-white';
+      const sub = variant === 'yellow' ? 'text-honeycomb-ink/70' : 'text-white/80';
+      const btn = variant === 'yellow'
+        ? 'bg-honeycomb-purple text-white hover:bg-honeycomb-ink'
+        : 'bg-honeycomb-yellow text-honeycomb-ink hover:bg-white';
+      const xc = variant === 'yellow' ? 'text-honeycomb-ink/60 hover:text-honeycomb-ink' : 'text-white/70 hover:text-white';
+      return `
+      <div id="floating-cta" class="fixed inset-x-0 top-0 z-50 -translate-y-full transition-transform duration-300 ease-out">
+        <div class="${shell}" style="box-shadow:0 2px 12px rgba(0,0,0,0.18)">
+          <div class="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 sm:px-6">
+            <p class="min-w-0 flex-1 truncate text-sm leading-snug ${lead} sm:whitespace-normal sm:text-base">
+              <span class="font-semibold">Could your business raise like this?</span>
+              <span class="hidden ${sub} lg:inline"> See if you prequalify in about two minutes.</span>
+            </p>
+            <a href="https://start.honeycomb.credit/?utm_source=case_study&utm_medium=website&utm_campaign=success_stories&utm_content=The-Saucy-African&utm_term=floating_bar"
+               target="_blank" rel="noopener"
+               class="shrink-0 whitespace-nowrap px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider no-underline transition-colors sm:text-sm ${btn}">
+              Get prequalified today!
+            </a>
+            <button id="floating-cta-dismiss" type="button" aria-label="Dismiss"
+                    class="-mr-1 shrink-0 rounded p-1 transition-colors ${xc}">
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-5 w-5">
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function pageHTML({ variant, behavior, revealAfter }) {
+      return `<!doctype html><html lang="en"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Raleway:wght@400;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"><\/script>
+<script>tailwind.config={theme:{extend:{colors:{honeycomb:{yellow:'#FFDE17',cream:'#F6F3E5',purple:'#3F296B',blue:'#D9ECFF',green:'#59B16B',ink:'#222222'}},fontFamily:{display:['Raleway','system-ui','sans-serif'],sans:['"Open Sans"','system-ui','sans-serif']}}}};<\/script>
+<style>
+  html{color:#222;background:#F6F3E5;font-family:'Open Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  body{background:linear-gradient(180deg,#F6F3E5 0%,#FFFFFF 100%);background-attachment:fixed;}
+  h1,h2,h3{font-family:'Raleway',system-ui,sans-serif;font-weight:600;letter-spacing:-0.01em;color:#222;}
+  a{color:#3F296B;}
+  .hero-photo{background:linear-gradient(135deg,#3F296B 0%,#59507e 45%,#FFDE17 130%);}
+<\/style></head>
+<body class="font-sans">
+${barMarkup(variant)}
+
+<!-- Site header -->
+<header class="border-b border-honeycomb-ink/10 bg-honeycomb-cream/70 backdrop-blur">
+  <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+    <span class="flex items-center gap-3">
+      <span class="inline-block h-6 w-6 rounded-sm bg-honeycomb-yellow"></span>
+      <span class="display font-bold text-lg tracking-wide uppercase">Honeycomb Credit</span>
+    </span>
+    <span class="text-sm font-semibold uppercase tracking-wider text-honeycomb-ink">Browse campaigns</span>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <section class="mx-auto max-w-5xl px-6 pt-12 pb-6">
+    <p class="text-sm font-semibold uppercase tracking-[0.2em] text-honeycomb-purple">Funded by their community · New Kensington, PA</p>
+    <h1 class="mt-3 display text-4xl leading-[1.1] sm:text-5xl md:text-6xl max-w-4xl">How The Saucy African turned 67 customers into the lenders who believed first</h1>
+    <p class="mt-5 max-w-3xl text-xl leading-snug text-honeycomb-ink/80">A West African simmer sauce maker found capital where the banks wouldn&rsquo;t look — at her own dinner table.</p>
+  </section>
+  <figure class="mx-auto max-w-5xl px-6">
+    <div class="relative">
+      <div class="hero-photo block w-full aspect-[1200/630] rounded-sm border border-honeycomb-ink/10 flex items-end">
+        <span class="display text-white/60 text-sm uppercase tracking-[0.2em] p-4">[ hero photograph ]</span>
+      </div>
+      <figcaption class="inline-block bg-honeycomb-yellow text-honeycomb-ink px-4 py-3 font-sans font-semibold mt-[-1px]">The Saucy African raised $46,842 from 67 investors.</figcaption>
+    </div>
+  </figure>
+
+  <!-- Metrics strip -->
+  <section class="mx-auto max-w-5xl px-6 mt-10">
+    <div class="grid grid-cols-1 gap-px bg-honeycomb-ink/80 border border-honeycomb-ink/80 sm:grid-cols-3">
+      <div class="flex flex-col gap-1 px-5 py-6 bg-honeycomb-yellow"><span class="text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-ink/70">Raised</span><span class="display text-3xl font-bold">$46,842</span></div>
+      <div class="flex flex-col gap-1 px-5 py-6 bg-honeycomb-cream"><span class="text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-ink/70">Investors</span><span class="display text-3xl font-bold">67</span></div>
+      <div class="flex flex-col gap-1 px-5 py-6 bg-honeycomb-cream"><span class="text-xs font-bold uppercase tracking-[0.18em] text-honeycomb-ink/70">Time to fund</span><span class="display text-3xl font-bold">about a month</span></div>
+    </div>
+  </section>
+
+  <!-- Story -->
+  <section class="mx-auto max-w-5xl px-6 mt-16">
+    <h2 class="display text-3xl leading-tight max-w-3xl">From a home kitchen to grocery shelves</h2>
+    <div class="max-w-prose text-honeycomb-ink/90">
+      <p class="text-lg leading-relaxed mt-5">If you make something people love and the bank still won&rsquo;t lend on it, you already know the shape of Yetunde&rsquo;s problem. She runs <strong>The Saucy African</strong>, a New Kensington, Pennsylvania maker of slow-cooked simmer sauces and spice blends rooted in West African cooking.</p>
+      <p class="text-lg leading-relaxed mt-5">By the end of 2025, the business had retail accounts, repeat customers, and the operational problems that come with both. Existing debt was eating into the monthly cash the business needed for inventory. A traditional small-business loan was not the right fit — and the owner didn&rsquo;t want to give up equity either.</p>
+      <blockquote class="mt-6 pl-5 border-l-4 border-honeycomb-purple italic text-honeycomb-ink/80">African flavors belong in the same everyday pantry rotation that Italian and Mexican flavors already occupy in most American kitchens — not as a specialty category, but as a Tuesday-night option.</blockquote>
+      <h2 class="display text-2xl mt-12 mb-3">A loan from the people who already cook with the sauce</h2>
+      <p class="text-lg leading-relaxed mt-5">Honeycomb Credit&rsquo;s structure matched the shape of the business. A fixed-rate, fixed-term community-funded loan let The Saucy African raise working capital from the people who already buy the sauce, without giving up equity and without waiting on a bank that wasn&rsquo;t going to say yes anyway.</p>
+      <p class="text-lg leading-relaxed mt-5">The campaign closed on January 29, 2026 with $46,841 raised from 67 investors against a $50,000 goal. Sixty-seven investors is the more interesting number: a meaningful base of people who already cook with the sauce and now have a direct stake in seeing the brand reach more shelves.</p>
+      <p class="text-lg leading-relaxed mt-5">The capital is going first to debt consolidation, then to inventory for new and existing retail accounts — the onboarding fees and sample shipments and in-store demos that retail expansion actually costs.</p>
+    </div>
+  </section>
+
+  <!-- Bottom CTA (the existing one) -->
+  <section class="mx-auto max-w-5xl px-6 mt-16">
+    <div class="grid gap-0 border border-honeycomb-ink/80 sm:grid-cols-[2fr_3fr]">
+      <div class="bg-honeycomb-yellow px-8 py-10 sm:py-14">
+        <p class="text-xs font-bold uppercase tracking-[0.2em] text-honeycomb-ink/70">Your turn</p>
+        <h2 class="mt-2 display text-3xl leading-tight">Could your business raise like this?</h2>
+      </div>
+      <div class="bg-honeycomb-cream px-8 py-10 sm:py-14">
+        <p class="text-lg leading-relaxed text-honeycomb-ink/80">Honeycomb Credit helps small businesses raise capital from the people who already love them. If that sounds like a fit, we&rsquo;ll walk you through whether your business qualifies.</p>
+        <div class="mt-6 flex flex-wrap gap-3">
+          <span class="inline-flex items-center bg-honeycomb-purple px-6 py-3 font-sans text-sm font-bold uppercase tracking-wider text-white">Fund your next production run</span>
+          <span class="inline-flex items-center px-6 py-3 font-sans text-sm font-bold uppercase tracking-wider text-honeycomb-ink border border-honeycomb-ink">See the original campaign</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="mx-auto max-w-5xl px-6 mt-16 pb-16">
+    <p class="text-xs uppercase tracking-[0.18em] text-honeycomb-ink/60">Food &amp; Beverage · West African simmer sauce maker · Published May 1, 2026</p>
+  </footer>
+</main>
+
+<script>
+  (function () {
+    var bar = document.getElementById('floating-cta');
+    var dismiss = document.getElementById('floating-cta-dismiss');
+    var behavior = ${JSON.stringify(behavior)};
+    var revealAfter = ${Number(revealAfter)};
+    var dismissed = false;
+    function show(){ bar.classList.remove('-translate-y-full'); }
+    function hide(){ bar.classList.add('-translate-y-full'); }
+    if (behavior === 'always') { show(); }
+    else {
+      function onScroll(){ if (dismissed) return; if (window.scrollY > revealAfter) show(); else hide(); }
+      window.addEventListener('scroll', onScroll, { passive:true });
+      onScroll();
+    }
+    dismiss.addEventListener('click', function(){ dismissed = true; hide(); });
+  })();
+<\/script>
+</body></html>`;
+    }
+
+    function render() {
+      const desktop = document.getElementById('frame-desktop');
+      const mobile = document.getElementById('frame-mobile');
+      const dDoc = desktop.contentWindow.document;
+      const mDoc = mobile.contentWindow.document;
+      dDoc.open(); dDoc.write(pageHTML({ variant: state.variant, behavior: state.behavior, revealAfter: 380 })); dDoc.close();
+      mDoc.open(); mDoc.write(pageHTML({ variant: state.variant, behavior: state.behavior, revealAfter: 300 })); mDoc.close();
+    }
+
+    // Wire segmented controls.
+    document.querySelectorAll('.seg').forEach((seg) => {
+      const group = seg.dataset.group;
+      seg.querySelectorAll('button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          seg.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+          state[group] = btn.dataset.value;
+          render();
+        });
+      });
+    });
+    document.getElementById('reshow').addEventListener('click', render);
+
+    render();
+  </script>
+</body>
+</html>
