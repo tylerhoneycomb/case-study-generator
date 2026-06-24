@@ -54,9 +54,11 @@ const ctaHref = buildPreQualifyHref(campaignSlug);
 <div
   id="floating-cta"
   data-reveal-after={revealAfter}
-  class="fixed inset-x-0 top-0 z-50 -translate-y-full transition-transform duration-300 ease-out motion-reduce:transition-none"
+  class="fixed inset-x-0 top-0 z-50 -translate-y-full transition-transform duration-300 ease-out motion-reduce:transition-none print:hidden"
   role="region"
   aria-label="Get prequalified with Honeycomb Credit"
+  aria-hidden="true"
+  inert
 >
   <div class="bg-honeycomb-purple text-white shadow-[0_2px_12px_rgba(0,0,0,0.18)]">
     <div class="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 sm:px-6">
@@ -66,7 +68,7 @@ const ctaHref = buildPreQualifyHref(campaignSlug);
       </p>
       <a
         href={ctaHref}
-        class="flex-1 whitespace-nowrap bg-honeycomb-yellow px-4 py-2 text-center font-sans text-xs font-bold uppercase tracking-wider text-honeycomb-ink no-underline transition-colors hover:bg-white sm:flex-none sm:text-left sm:text-sm"
+        class="flex-1 whitespace-nowrap bg-honeycomb-yellow px-4 py-2 text-center font-sans text-xs font-bold uppercase tracking-wider text-honeycomb-ink no-underline transition-colors hover:bg-white focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-honeycomb-purple sm:flex-none sm:text-left sm:text-sm"
       >
         {ctaText}
       </a>
@@ -74,7 +76,7 @@ const ctaHref = buildPreQualifyHref(campaignSlug);
         id="floating-cta-dismiss"
         type="button"
         aria-label="Dismiss"
-        class="-mr-1 shrink-0 rounded p-1 text-white/70 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        class="-mr-2 shrink-0 rounded p-2 text-white/80 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
       >
         <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" class="h-5 w-5">
           <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -86,30 +88,44 @@ const ctaHref = buildPreQualifyHref(campaignSlug);
 
 <script>
   // Reveal-on-scroll + session-scoped dismissal. Plain DOM, no framework.
+  // The bar ships hidden, inert, and aria-hidden so its controls are never a
+  // phantom tab stop / screen-reader announcement while off-screen. Visibility,
+  // inert, and aria-hidden are kept in lockstep as it reveals and dismisses.
   const bar = document.getElementById('floating-cta');
   const dismiss = document.getElementById('floating-cta-dismiss');
   if (bar) {
     const STORAGE_KEY = 'floating_cta_dismissed';
     const revealAfter = Number(bar.dataset.revealAfter ?? '600');
     let dismissed = false;
+    let visible = false;
     try {
       dismissed = sessionStorage.getItem(STORAGE_KEY) === '1';
     } catch {
       // sessionStorage can throw in private/blocked contexts — fail open.
     }
 
-    const show = () => bar.classList.remove('-translate-y-full');
-    const hide = () => bar.classList.add('-translate-y-full');
+    // Single source of truth: only touch the DOM when the state actually flips,
+    // so a stream of scroll events doesn't thrash classList/inert/aria.
+    const setVisible = (next) => {
+      if (next === visible) return;
+      visible = next;
+      bar.classList.toggle('-translate-y-full', !next);
+      bar.inert = !next;
+      bar.setAttribute('aria-hidden', next ? 'false' : 'true');
+    };
 
     const onScroll = () => {
       if (dismissed) return;
-      if (window.scrollY > revealAfter) show();
-      else hide();
+      setVisible(window.scrollY > revealAfter);
     };
 
     dismiss?.addEventListener('click', () => {
       dismissed = true;
-      hide();
+      window.removeEventListener('scroll', onScroll);
+      // Move focus off the button before the bar goes inert (covers browsers
+      // without inert focus management), then slide it away.
+      if (document.activeElement === dismiss) dismiss.blur();
+      setVisible(false);
       try {
         sessionStorage.setItem(STORAGE_KEY, '1');
       } catch {
