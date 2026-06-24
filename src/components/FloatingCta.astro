@@ -6,13 +6,10 @@
 // this bar can be told apart from the bottom CTA in analytics. Without that you
 // can't measure whether the floating bar actually earns its keep.
 //
-// NOT wired into CaseStudy.astro yet — this component exists so the floating
-// bar can be evaluated (see /demo/floating-cta.html) before it ships on every
-// live page. To roll it out, add one line to the layout right after <body>:
+// Rendered on every case study via CaseStudy.astro (right after <body>). The
+// interactive design comparison lives at /demo/floating-cta.html.
 //
-//   <FloatingCta campaignSlug={d.campaignSlug} />
-//
-// Behavior (matches the recommended variant in the demo):
+// Behavior (the recommended variant from that demo):
 //   - Hidden on load; slides down once the reader scrolls past the hero, so it
 //     never competes with the H1 above the fold.
 //   - Dismissible. Dismissal is remembered for the browser session so it does
@@ -63,13 +60,13 @@ const ctaHref = buildPreQualifyHref(campaignSlug);
 >
   <div class="bg-honeycomb-purple text-white shadow-[0_2px_12px_rgba(0,0,0,0.18)]">
     <div class="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 sm:px-6">
-      <p class="min-w-0 flex-1 truncate text-sm leading-snug sm:whitespace-normal sm:text-base">
+      <p class="hidden min-w-0 flex-1 truncate text-sm leading-snug sm:block sm:text-base">
         <span class="font-semibold">{message}</span>
         <span class="hidden text-white/80 lg:inline"> See if you prequalify in about two minutes.</span>
       </p>
       <a
         href={ctaHref}
-        class="shrink-0 whitespace-nowrap bg-honeycomb-yellow px-4 py-2 font-sans text-xs font-bold uppercase tracking-wider text-honeycomb-ink no-underline transition-colors hover:bg-white sm:text-sm"
+        class="flex-1 whitespace-nowrap bg-honeycomb-yellow px-4 py-2 text-center font-sans text-xs font-bold uppercase tracking-wider text-honeycomb-ink no-underline transition-colors hover:bg-white sm:flex-none sm:text-left sm:text-sm"
       >
         {ctaText}
       </a>
