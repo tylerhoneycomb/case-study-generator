@@ -7,6 +7,7 @@ import Hero from '~/components/Hero.astro';
 import MetricsStrip from '~/components/MetricsStrip.astro';
 import Quote from '~/components/Quote.astro';
 import Cta from '~/components/Cta.astro';
+import FloatingCta from '~/components/FloatingCta.astro';
 import JsonLd from '~/components/JsonLd.astro';
 
 interface Props {
@@ -37,6 +38,7 @@ const ogImageUrl = new URL(ogPath, siteOrigin).toString();
     <JsonLd data={d.systemSchemaJson} />
   </head>
   <body class="font-sans">
+    <FloatingCta campaignSlug={d.campaignSlug} />
     <SiteHeader />
     <main>
       <Hero
