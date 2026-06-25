@@ -18,10 +18,11 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
-                    │
+                    │              ⚠ Cron PAUSED as of 2026-06-09; trigger manually
+                    │              via workflow_dispatch or the operator portal.
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
@@ -68,12 +69,17 @@ npm test           # vitest run (57 tests)
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
 
 ```bash
-npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
-npx tsx scripts/generate.ts <slug>           # ~$0.45 spend
-npx tsx scripts/redraft.ts <slug> --feedback="..."
-npx tsx scripts/delete.ts <slug>
-npx tsx scripts/backfill.ts --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
-npx tsx scripts/detect.ts [--dry-run]        # the cron entry point
+# npm run shortcuts (defined in package.json)
+npm run inspect -- <slug>            # diagnostic, no spend
+npm run generate -- <slug>           # ~$0.45 spend
+npm run redraft -- <slug> --feedback="..."
+npm run delete -- <slug>
+npm run backfill -- --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
+npm run detect -- [--dry-run]        # the cron entry point
+
+# or directly via tsx
+npx tsx scripts/inspect.ts <slug>
+npx tsx scripts/generate.ts <slug>
 ```
 
 ## Repo layout
@@ -88,7 +94,7 @@ src/
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
   layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
   CNAME                   ← funded.honeycombcredit.com
@@ -109,7 +115,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 04:47 / 11:23 UTC daily (PAUSED 2026-06-09; workflow_dispatch active)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -123,9 +129,11 @@ prompts/
 
 ### Operational state (live status)
 
+> ⚠ **Cron paused.** The daily detection cron (`detect.yml`) was paused on 2026-06-09 to stop Anthropic API spend while the project is on hold. Resume by uncommenting the two `cron:` lines in `.github/workflows/detect.yml`. Until then, use `workflow_dispatch` from the Actions tab or the operator portal for one-off generation.
+
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron run after PR #29; appended on every subsequent run |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
