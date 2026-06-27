@@ -264,6 +264,19 @@ describe('resolveCampaignsByName', () => {
     ]);
   });
 
+  it('escapes single quotes and backslashes in names (no literal break / injection)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(resolveBody([]));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    await resolveCampaignsByName(["O'Briens", 'Back\\slash']);
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as { body: string }).body);
+    // Single quote doubled, backslash doubled — the closing quote of each
+    // string literal stays intact.
+    expect(body.query.query).toContain("campaignname ILIKE '%O''Briens%'");
+    expect(body.query.query).toContain("campaignname ILIKE '%Back\\\\slash%'");
+  });
+
   it('throws PostHogError when the API key is missing', async () => {
     delete process.env['POSTHOG_API_KEY'];
     await expect(resolveCampaignsByName(['Anything'])).rejects.toBeInstanceOf(PostHogError);

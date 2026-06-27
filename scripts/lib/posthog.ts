@@ -215,10 +215,13 @@ export interface NameResolution {
   candidates: ResolvedCampaign[];
 }
 
-// Escape a value for safe interpolation into a single-quoted HogQL string
-// literal. Names are operator-supplied free text, so quote-escape them.
+// Escape a value for safe interpolation into a single-quoted HogQL/ClickHouse
+// string literal. Names are operator-supplied free text. Escape backslashes
+// first (so we don't double-process the ones we add), then single quotes —
+// both are literal-terminating in ClickHouse, so a name ending in `\` or
+// containing `'` must be neutralized or it breaks (or injects into) the query.
 function sqlLiteral(value: string): string {
-  return value.replace(/'/g, "''");
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "''");
 }
 
 // Slug form of a name: lowercase words joined by hyphens. Used as a second
