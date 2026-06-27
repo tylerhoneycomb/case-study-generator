@@ -68,6 +68,7 @@ npm test           # vitest run (57 tests)
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
 
 ```bash
+npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
 npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
 npx tsx scripts/generate.ts <slug>           # ~$0.45 spend
 npx tsx scripts/redraft.ts <slug> --feedback="..."
@@ -75,6 +76,17 @@ npx tsx scripts/delete.ts <slug>
 npx tsx scripts/backfill.ts --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
 npx tsx scripts/detect.ts [--dry-run]        # the cron entry point
 ```
+
+**Finding a campaign by name (cheaply).** When you have a business *name* but
+not its Honeycomb slug, run `scripts/resolve.ts` first. It answers
+"does this exist / is it funded / what's the slug?" with **one free PostHog
+query** — no Anthropic spend, no GitHub Actions run. It exits non-zero unless
+every name resolves to exactly one fundable campaign, so it doubles as a gate:
+resolve names → copy the fundable slugs into a Backfill (`scripts/backfill.ts`
+or the Backfill issue form). This keeps name-hunting off the paid generation
+path, so a name that doesn't exist or never funded costs nothing and never
+fires a doomed pipeline run. Needs `POSTHOG_API_KEY` + `POSTHOG_PROJECT_ID`
+(same secrets the detect cron uses).
 
 ## Repo layout
 
@@ -94,9 +106,9 @@ public/
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
-  status.ts cost-estimate.ts dispatch-comment.ts dispatch-issue.ts
+  resolve.ts status.ts cost-estimate.ts dispatch-comment.ts dispatch-issue.ts
   lib/
-    posthog.ts            ← HogQL client — discovery source for funded slugs
+    posthog.ts            ← HogQL client — funded-slug discovery + name→slug resolver
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
     humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
