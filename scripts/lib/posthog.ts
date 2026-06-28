@@ -230,6 +230,14 @@ function slugForm(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, '-');
 }
 
+// A usable search name has at least one alphanumeric character. A
+// punctuation-only token ("&", "-", "'") would otherwise build an
+// over-broad ILIKE '%&%' that matches most rows and reports spurious
+// ambiguity; we treat such tokens as not-found and never query for them.
+function hasAlnum(name: string): boolean {
+  return /[a-z0-9]/i.test(name);
+}
+
 // Does a returned campaign belong to this input name? Case-insensitive
 // substring on either the display name or the slug. (The SQL already
 // narrowed to rows matching *some* name; this attributes each row back to
@@ -251,48 +259,59 @@ export async function resolveCampaignsByName(names: string[]): Promise<NameResol
   const cleaned = names.map((n) => n.trim()).filter(Boolean);
   if (cleaned.length === 0) return [];
 
-  // One OR-predicate per name, matching either the display name or the
-  // hyphenated slug form. ILIKE is case-insensitive substring in HogQL.
-  const predicates = cleaned
-    .map((n) => {
-      const nameLike = `%${sqlLiteral(n)}%`;
-      const slugLike = `%${sqlLiteral(slugForm(n))}%`;
-      return `(campaignname ILIKE '${nameLike}' OR slug ILIKE '${slugLike}')`;
-    })
-    .join(' OR ');
+  // Only names with real content get a query predicate. Punctuation-only
+  // tokens are reported not-found below without ever hitting PostHog.
+  const usable = cleaned.filter(hasAlnum);
 
-  const query = `
-    SELECT slug, campaignname, campaignstage, campaignexpirationdate AS fundedat
-    FROM postgres.campaigns
-    WHERE _fivetran_deleted = false
-      AND deletedat IS NULL
-      AND (${predicates})
-    ORDER BY campaignname
-    LIMIT 500
-  `.trim();
+  let all: ResolvedCampaign[] = [];
+  if (usable.length > 0) {
+    // One OR-predicate per usable name, matching either the display name or
+    // the hyphenated slug form. ILIKE is case-insensitive substring in HogQL.
+    const predicates = usable
+      .map((n) => {
+        const nameLike = `%${sqlLiteral(n)}%`;
+        const slugLike = `%${sqlLiteral(slugForm(n))}%`;
+        return `(campaignname ILIKE '${nameLike}' OR slug ILIKE '${slugLike}')`;
+      })
+      .join(' OR ');
 
-  const { columns, rows } = await runHogQL(query);
-  const idx = columnIndex(columns, ['slug', 'campaignname', 'campaignstage', 'fundedat']);
+    const query = `
+      SELECT slug, campaignname, campaignstage, campaignexpirationdate AS fundedat
+      FROM postgres.campaigns
+      WHERE _fivetran_deleted = false
+        AND deletedat IS NULL
+        AND (${predicates})
+      ORDER BY campaignname
+      LIMIT 500
+    `.trim();
 
-  const all: ResolvedCampaign[] = [];
-  for (const row of rows) {
-    const slug = row[idx['slug']!];
-    if (typeof slug !== 'string' || !slug) {
-      warn('posthog resolve row skipped: missing slug', { row });
-      continue;
+    const { columns, rows } = await runHogQL(query);
+    const idx = columnIndex(columns, ['slug', 'campaignname', 'campaignstage', 'fundedat']);
+
+    all = [];
+    for (const row of rows) {
+      const slug = row[idx['slug']!];
+      if (typeof slug !== 'string' || !slug) {
+        warn('posthog resolve row skipped: missing slug', { row });
+        continue;
+      }
+      const campaignName = row[idx['campaignname']!];
+      const campaignStage = row[idx['campaignstage']!];
+      const fundedAt = row[idx['fundedat']!];
+      all.push({
+        slug,
+        campaignName: typeof campaignName === 'string' ? campaignName : slug,
+        campaignStage: typeof campaignStage === 'string' ? campaignStage : '',
+        fundedAt: typeof fundedAt === 'string' ? fundedAt : '',
+      });
     }
-    const campaignName = row[idx['campaignname']!];
-    const campaignStage = row[idx['campaignstage']!];
-    const fundedAt = row[idx['fundedat']!];
-    all.push({
-      slug,
-      campaignName: typeof campaignName === 'string' ? campaignName : slug,
-      campaignStage: typeof campaignStage === 'string' ? campaignStage : '',
-      fundedAt: typeof fundedAt === 'string' ? fundedAt : '',
-    });
   }
 
   return cleaned.map((query): NameResolution => {
+    // Punctuation-only token: nothing meaningful to resolve.
+    if (!hasAlnum(query)) {
+      return { query, found: false, ambiguous: false, fundable: false, candidates: [] };
+    }
     const candidates = all.filter((c) => nameMatchesCampaign(query, c));
     if (candidates.length === 0) {
       return { query, found: false, ambiguous: false, fundable: false, candidates: [] };

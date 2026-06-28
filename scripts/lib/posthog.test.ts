@@ -277,6 +277,38 @@ describe('resolveCampaignsByName', () => {
     expect(body.query.query).toContain("campaignname ILIKE '%Back\\\\slash%'");
   });
 
+  it('treats punctuation-only tokens as not-found without querying', async () => {
+    const fetchMock = vi.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const results = await resolveCampaignsByName(['&', '-', "'"]);
+    expect(results.map((r) => [r.query, r.found, r.fundable])).toEqual([
+      ['&', false, false],
+      ['-', false, false],
+      ["'", false, false],
+    ]);
+    // No usable name → no PostHog round trip at all.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('queries only the usable names when junk is mixed in', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      resolveBody([['Sensi-Fit', 'Sensi Fit', 'Funded', '2025-04-24']]),
+    );
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const results = await resolveCampaignsByName(['&', 'Sensi Fit']);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as { body: string }).body);
+    // The junk token contributes no predicate.
+    expect(body.query.query).not.toContain("'%&%'");
+    expect(body.query.query).toContain("campaignname ILIKE '%Sensi Fit%'");
+    expect(results.map((r) => [r.query, r.found, r.fundable])).toEqual([
+      ['&', false, false],
+      ['Sensi Fit', true, true],
+    ]);
+  });
+
   it('throws PostHogError when the API key is missing', async () => {
     delete process.env['POSTHOG_API_KEY'];
     await expect(resolveCampaignsByName(['Anything'])).rejects.toBeInstanceOf(PostHogError);
