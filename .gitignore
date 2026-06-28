@@ -22,3 +22,6 @@ pnpm-debug.log*
 
 # Build artifacts
 *.tsbuildinfo
+
+# Personal Claude Code settings (per-user permissions)
+.claude/settings.local.json
