@@ -18,9 +18,10 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │   ⚠ PAUSED             │  filters out already-published, newest first.
+       └────────────┬───────────┘  workflow_dispatch still works for manual runs.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -33,6 +34,13 @@ the case studies live as MDX files in this repo.
        │   site rebuild         │  Live within ~2 min of any commit to main.
        └────────────────────────┘
 ```
+
+> ⚠ **The daily cron is currently paused** (per operator request, 2026-06-09) to
+> stop Anthropic API spend while the project is on hold. `workflow_dispatch` is
+> still wired up, so it can be run manually from the Actions tab, and re-armed
+> by uncommenting the `schedule:` block in [`detect.yml`](.github/workflows/detect.yml).
+> New case studies during the pause go through the operator portal, slash
+> commands, or Issue Forms instead.
 
 The same pipeline is also reachable manually:
 
@@ -52,7 +60,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +70,10 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env; `resolve.ts` and `detect.ts` additionally need `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID` (see [`.env.example`](.env.example)). In CI all four are wired up via repo secrets.
 
 ```bash
 npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
