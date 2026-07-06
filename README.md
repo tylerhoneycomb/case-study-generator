@@ -3,24 +3,28 @@
 The Collateral Development Agent. A static site at
 [funded.honeycombcredit.com](https://funded.honeycombcredit.com) that
 publishes a case study for every funded Honeycomb Credit campaign. The
-**repo itself is the agent** — GitHub Actions runs the detection cron,
-operators drive ad-hoc actions through GitHub Issues and a web portal, and
-the case studies live as MDX files in this repo.
+**repo itself is the agent** — GitHub Actions runs the detection cron (see
+⚠ below for current status), operators drive ad-hoc actions through GitHub
+Issues and a web portal, and the case studies live as MDX files in this repo.
 
 | Surface | URL |
 |---|---|
 | **Live site** | https://funded.honeycombcredit.com |
 | **Operator portal** (you'll be here most of the time) | https://funded.honeycombcredit.com/admin |
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
-| **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
+| **Cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
+
+> ⚠ **Cron status: paused.** The `detect.yml` schedule has been commented out since 2026-06-09 (commit `801bae8`, per Tyler, to stop steady-state Anthropic spend while the project is on hold). Only manual `workflow_dispatch` runs fire until someone uncomments the `schedule:` block in `.github/workflows/detect.yml`. Check the last row of [`.state/detection-log.md`](.state/detection-log.md) for the most recent run — as of this writing that's 2026-06-01. `on-comment.yml` and `on-issue.yml` (manual triggers) are unaffected.
 
 ## How it works
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │   detect.yml           │  queries PostHog (Fivetran-mirrored
+       │   (cron — PAUSED,      │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │   workflow_dispatch    │  filters out already-published, newest first.
+       │   only; see ⚠ above)   │
+       └────────────┬───────────┘
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -51,8 +55,8 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **Astro 5** + TypeScript (strict, `noUncheckedIndexedAccess`) + Tailwind + MDX content collections
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
-- **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.47 per case study)
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +66,10 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env (`resolve.ts`/`detect.ts` also need `POSTHOG_API_KEY` + `POSTHOG_PROJECT_ID`). See [`.env.example`](.env.example) for the full list, including optional overrides (`POSTHOG_HOST`, `CASE_STUDY_MODEL`, `FUNDED_REPO`). In CI all required vars are wired up via repo secrets.
 
 ```bash
 npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
@@ -99,10 +103,12 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating CTA bar)
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead,
+                             SiteHeader, SiteFooter
 public/
   og/                     ← hero / OG images, one per case study
+  demo/floating-cta.html  ← standalone design-comparison mockup for FloatingCta.astro
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
@@ -121,7 +127,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← detection cron — PAUSED since 2026-06-09, workflow_dispatch only (see ⚠ Status above)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -137,7 +143,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First run after PR #29; appended on every `detect.yml` invocation (scheduled or manual). No rows since 2026-06-01 — the schedule has been paused since 2026-06-09, see ⚠ Status above |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -155,7 +161,7 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 
 | Item | Cost |
 |---|---|
-| Generate or redraft | ~$0.45 per call (Opus 4.7, ~17K input + ~2.7K output tokens) |
+| Generate or redraft | ~$0.47 per call (Opus 4.7, ~17K input + ~2.8K output tokens) |
 | Inspect / delete / status | $0 |
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
