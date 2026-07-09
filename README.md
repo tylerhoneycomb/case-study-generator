@@ -14,13 +14,27 @@ the case studies live as MDX files in this repo.
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
 | **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
 
+## Current status
+
+**The daily detection cron is paused** (per Tyler, since 2026-06-09) to stop
+steady-state Anthropic spend while the project is on hold. Both `schedule`
+slots in `.github/workflows/detect.yml` are commented out; `workflow_dispatch`
+still works, so an operator can fire a one-off scan (or dry-run) from the
+Actions tab without editing the workflow file. `on-comment.yml` and
+`on-issue.yml` are untouched — slash commands, the portal, and Issue Forms all
+still work normally. Resume automated detection by uncommenting the
+`schedule:` block in `detect.yml`. The four case studies published on
+2026-06-27 (Sensi Fit, Sigma Snacks, Death Comes Lifting, The Ladies Room)
+went out via manual/backfill dispatch during the pause, not the cron.
+
 ## How it works
 
 ```
        ┌────────────────────────┐
        │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │   ⚠ currently paused   │  filters out already-published, newest first.
+       └────────────┬───────────┘  See "Current status" above.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -52,7 +66,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +76,14 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in
+env; `detect.ts` and `resolve.ts` additionally need `POSTHOG_API_KEY` and
+`POSTHOG_PROJECT_ID` (optionally `POSTHOG_HOST`, defaults to
+`us.posthog.com`). In CI all of these are wired up via repo secrets and
+`secrets.GITHUB_TOKEN`. See `.env.example`.
 
 ```bash
 npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
@@ -112,6 +130,7 @@ scripts/
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
     humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
+    humanization-rules.ts ← banned-phrase/opener rule source, shared by humanize.ts and claude.ts's prompt injection
     ratelimit.ts          ← 1/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
