@@ -34,6 +34,14 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
+> ⚠ **The cron is currently paused.** Both `schedule:` triggers in
+> `detect.yml` are commented out (per operator request, 2026-06-09) to stop
+> Anthropic API spend while the project is on hold. `workflow_dispatch`
+> still works, so detection can be re-armed one-off from the Actions tab, or
+> permanently by uncommenting the `schedule:` block. All manual paths
+> (portal, slash commands, Issue Forms) are unaffected. See the comment
+> block at the top of `detect.yml` for the full history.
+
 The same pipeline is also reachable manually:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
@@ -52,7 +60,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +70,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
