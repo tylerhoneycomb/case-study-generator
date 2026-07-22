@@ -3,7 +3,7 @@
 > **System/user prompt sent to the Claude API by the Collateral Development Agent for every newly-funded Honeycomb Credit campaign.**
 > The agent provides the input payload (Section 3) immediately after this prompt. You must return the output JSON (Section 4) with no preamble, no markdown fencing, and no commentary. Your entire response must parse as JSON on first attempt.
 >
-> **Version:** aligned with Collateral Agent spec v3.3. Output keys map 1:1 to Wix CMS field IDs in the `CaseStudies` collection.
+> **Version:** Collateral Development Agent v4.0. Output keys map 1:1 to Astro content-collection frontmatter fields (`src/content/config.ts`).
 
 ---
 
@@ -36,33 +36,31 @@ The user message that follows this prompt contains a single JSON object scraped 
 ```json
 {
   "campaignName": "string — the display name of the campaign, e.g. \"Brothmonger\"",
-  "slug": "string — the Honeycomb URL slug, e.g. \"Brothmonger-Brooklyn-Bone-Broth\". Do NOT reuse this as the case-study slug.",
-  "issuer": {
-    "businessType": "string — broad industry category from Honeycomb's form, e.g. \"Food & Beverage\"",
-    "city": "string — e.g. \"Brooklyn\"",
-    "state": "string — two-letter abbrev, e.g. \"NY\"",
-    "description": "string — short business description the owner wrote",
-    "website": "string — URL, may be empty"
-  },
-  "summary": "string — HTML narrative the business wrote during their raise. Often 500–2000 words. May contain any HTML. Treat as primary factual source for the story.",
-  "useOfProceeds": "string — what the business said they would spend the money on",
+  "campaignSlug": "string — the Honeycomb URL slug, e.g. \"Brothmonger-Brooklyn-Bone-Broth\". Do NOT reuse this as the case-study slug.",
+  "campaignId": "string — internal Honeycomb campaign identifier",
+  "city": "string — e.g. \"Brooklyn\"",
+  "state": "string — two-letter uppercase abbreviation, e.g. \"NY\"",
   "totalFundsRaised": "number — e.g. 100000",
   "campaignTargetAmount": "number — the goal, e.g. 75000",
   "numInvestors": "number — e.g. 117",
   "campaignStartDate": "string — ISO date, e.g. \"2025-10-14\"",
   "campaignExpirationDate": "string — ISO date, e.g. \"2025-11-04\"",
-  "investmentType": "string — e.g. \"Debt\"",
-  "annualInterestRate": "number or null — e.g. 10",
-  "loanDuration": "string or null — e.g. \"36 months\"",
+  "summary": "string — HTML narrative the business wrote during their raise. Often 500–2000 words. May contain any HTML. Treat as primary factual source for the story.",
+  "useOfProceeds": "string (optional) — what the business said they would spend the money on",
+  "issuerWebsite": "string (optional) — business website URL",
+  "issuerDescription": "string (optional) — short business description the owner wrote",
+  "ogImageUrl": "string (optional) — URL of the campaign's hero/OG image",
   "todayISO": "string — ISO date injected by the agent at call time, e.g. \"2026-04-24\". Use this in systemSchemaJson as datePublished."
 }
 ```
+
+Note: the input payload does not carry an investment-type field (debt/revenue-share/equity) — see Section 13's "Investment structure" rule for how to handle that gap.
 
 ---
 
 ## 4. Output schema
 
-Return a single JSON object with exactly these top-level keys, in this order, and nothing else. Each key maps 1:1 to a Wix CMS field ID.
+Return a single JSON object with exactly these top-level keys, in this order, and nothing else. Each key maps 1:1 to an MDX frontmatter field in `src/content/config.ts` (the `story` key is the exception — it becomes the MDX body, not a frontmatter field).
 
 ```json
 {
@@ -114,7 +112,7 @@ Honeycomb's brand voice is **disruptive, approachable, trustworthy.** In practic
 
 - Don't sound like a press release. "Delighted to announce" and "is proud to share" do not appear in Honeycomb's voice.
 - Don't sound like a pitch deck. Avoid "leverage," "empower," "ecosystem," "solutions," "paradigm," "synergy."
-- Don't sell financial products in the copy. No "low interest rate" bragging, no APR comparisons. The mechanism (community-funded loan, revenue share, or equity raise per `investmentType`) should come through the story, not through a features list. See Section 13 for the exact phrasing per structure.
+- Don't sell financial products in the copy. No "low interest rate" bragging, no APR comparisons. The mechanism (a Honeycomb raise, however it's structured) should come through the story, not through a features list. See Section 13 for the exact phrasing rule.
 - Don't editorialize about the owner's future. Stick to what they told their investors they would do. Don't predict further success.
 - Don't use the word **"groundbreaking"** — even though it appears in the brand voice descriptors. The humanization layer blocks it because AI writing overuses it. Express disruption through the substance of the story (bank turned them down, customers became investors) rather than through a hype adjective.
 - Similarly avoid the brand framing "not just a financial transaction" in generated copy — the "not just X but Y" pattern is blocked. Rephrase.
@@ -562,7 +560,7 @@ The reader should want to read the piece *because of the headline*. A headline t
 
 `Food & Beverage`, `Retail`, `Health & Wellness`, `Personal Services`, `Professional Services`, `Arts & Entertainment`, `Manufacturing & Craft`, `Agriculture`, `Hospitality`, `Technology`, `Education`, `Other`.
 
-This field drives the Related Case Studies block on the site. Inventing a value orphans the case study. The input's `issuer.businessType` is a hint — not the source of truth. Map it to the closest controlled value. If nothing fits, return `Other`.
+This field drives the Related Case Studies block on the site. Inventing a value orphans the case study. The input's `issuerDescription` and `summary` are your hints — not the source of truth. Map the business to the closest controlled value. If nothing fits, return `Other`.
 
 ### Keyword tags — internal use only
 
@@ -626,11 +624,11 @@ Produce a single JSON-LD array containing **two** items: one `LocalBusiness` (or
 - `@type`: the subtype from the table above
 - `name`: from `campaignName`
 - `address`: a `PostalAddress` with `addressLocality` (city), `addressRegion` (state abbrev), `addressCountry: "US"`. Street address is optional; omit if not in input.
-- `description`: one sentence pulled or paraphrased from `issuer.description` or `summary`. Keep short.
+- `description`: one sentence pulled or paraphrased from `issuerDescription` or `summary`. Keep short.
 - `image`: from the `ogImageUrl` value in the input payload. Required when `ogImageUrl` is present in input. Omit only if `ogImageUrl` is missing entirely.
 
 **Recommended properties when supported by input:**
-- `url`: from `issuer.website` if present and valid
+- `url`: from `issuerWebsite` if present and valid
 - `keywords`: populate from the keyword tags you generated in Section 8, joined as a comma-separated string
 
 **Article object required properties:**
@@ -655,7 +653,7 @@ The entire stringified `systemSchemaJson` must stay under **8,000 characters**. 
 
 ## 10. Slug rules
 
-The case-study slug is what appears in the final URL: `honeycombcredit.com/case-studies/{slug}`. It is distinct from the Honeycomb platform slug in `input.slug` and must be constructed independently.
+The case-study slug is what appears in the final URL: `funded.honeycombcredit.com/{slug}`. It is distinct from the Honeycomb platform slug in `input.campaignSlug` and must be constructed independently.
 
 **Rules.**
 - Lowercase only.
@@ -682,7 +680,7 @@ If you suspect a slug may already exist (e.g., a second Nomad Donuts), append on
 
 ## 11. Rich-text HTML rules
 
-The `story` field is stored in a Wix rich-text field and rendered inside a `<div>` the template controls. Only a subset of HTML is accepted; anything outside the allowlist is stripped at render time.
+The `story` field becomes the body of an Astro MDX content-collection entry, compiled and rendered via `entry.render()` in `src/pages/[...slug].astro`. There is no sanitization step in the build — MDX renders whatever HTML you emit directly into the page's DOM. Only a subset of HTML is accepted by this prompt's contract; anything outside the allowlist below (a stray `<div>`, `<script>`, or `<iframe>`) ships to the live page exactly as written, so treat the allowlist as a hard requirement, not a suggestion the pipeline will clean up after you.
 
 **Allowlist (use freely):** `<p>`, `<h2>`, `<h3>`, `<h4>`, `<h5>`, `<h6>`, `<a>`, `<b>`, `<strong>`, `<i>`, `<em>`, `<u>`, `<ul>`, `<ol>`, `<li>`, `<br>`, `<span>`.
 
@@ -750,7 +748,7 @@ The first sentence of `story` must not begin with any of: {{HUMANIZATION_BANNED_
 
 - **Fabricated quotes.** Never attribute a quote to the owner unless it appears verbatim in the input `summary`. The `quote` field in the CMS is handled separately.
 - **Invented facts.** If the input does not say the owner grew up in the neighborhood, you do not know that. If the input does not give a founding year, do not name one. Either find an honest angle or leave the detail out.
-- **Invented financial terms.** If `annualInterestRate` is null, do not say "at a competitive rate." Say "through a Honeycomb raise."
+- **Invented financial terms.** The interest rate is not in the input payload. Do not say "at a competitive rate." Say "through a Honeycomb raise."
 - **Hype metrics.** No "the campaign exploded," "demand was overwhelming," "it took off." Let the numbers carry the weight.
 - **Sales-copy sign-offs.** Do not end the story with "Ready to fund your own raise?" or similar. The CTA blocks below the story do that job; the story ends on the business.
 - **Reader-address breaks.** Do not write sentences that step outside the narrative to address "the prospective borrower reading this," "the small-business owner weighing this," "the reader," or any second-person framing of who the audience is. Do not narrate why this case study is in the case-study set ("that outcome is part of why this story is here"). Do not editorialize about what "the discerning reader knows" or what "matters to the reader." Tell the story; trust the reader to extract the meaning. If a piece of context is load-bearing, put it in the narrative. If it isn't, cut it.
@@ -879,11 +877,11 @@ If a detail would help the story but is not in the input:
 
 Cases requiring particular care:
 
-- **Founder backstory.** Use only what `summary` or `issuer.description` states. Never invent childhood, training, or motivation.
-- **Investor identities.** You may describe investors as "regulars," "neighbors," "customers," "local families," etc. *only* if `summary` or `issuer.description` supports that characterization. If the input is silent on who the investors were, say "117 investors" and move on.
+- **Founder backstory.** Use only what `summary` or `issuerDescription` states. Never invent childhood, training, or motivation.
+- **Investor identities.** You may describe investors as "regulars," "neighbors," "customers," "local families," etc. *only* if `summary` or `issuerDescription` supports that characterization. If the input is silent on who the investors were, say "117 investors" and move on.
 - **Quotes.** See Section 12.5. Never fabricate.
 - **Outcomes.** `useOfProceeds` tells you what the business said they *would* do with the money. You may say "the funds went toward X." You may not say "the new kitchen is now serving Y customers a week" unless that is explicitly in the input.
-- **Investment structure.** The `investmentType` field may be `Debt`, `Revenue Share`, `Preferred Equity`, or another structure. Use the phrase *"fixed-rate, fixed-term community-funded loan"* only when `investmentType` is `Debt`. For `Revenue Share`, use *"community-funded revenue share offering"* or *"community-backed revenue share"*. For `Preferred Equity`, use *"community-funded preferred equity raise"* or *"community-backed raise"*. When in doubt, fall back to the neutral terms *"Honeycomb raise"* or *"community-funded raise"* — both are always accurate. Never describe a non-Debt offering as a loan. This is a compliance-adjacent error, not a style preference.
+- **Investment structure.** The input payload does not carry a debt/revenue-share/equity type field. Default to the neutral terms *"Honeycomb raise"* or *"community-funded raise"* — both are always accurate regardless of structure. Only use *"fixed-rate, fixed-term community-funded loan"* or the word "loan" if `summary` explicitly describes the raise that way in the owner's own words. Never assume a structure the input doesn't state. Describing a revenue-share or equity raise as a loan is a compliance-adjacent error, not a style preference.
 - **Dates.** Use `campaignStartDate` and `campaignExpirationDate` to describe the raise window. Do not predict when a project will open unless the input gives a date.
 - **Location.** Use the `city` and `state` from the input payload verbatim in `h1Heading`, `metaTitle`, `metaDescription`, and the body's first mention. Do not substitute a nearby MSA or larger metro for the named city (e.g., do not write "Huntsville, AL" when the input says "Madison, AL," even if Madison is part of the Huntsville MSA). The header chip and structured-data fields render directly from the input — if the body names a different city, the page contradicts itself.
 
@@ -948,24 +946,20 @@ Study the shape.
 ```json
 {
   "campaignName": "Brothmonger",
-  "slug": "Brothmonger-Brooklyn-Bone-Broth",
-  "issuer": {
-    "businessType": "Food & Beverage",
-    "city": "Brooklyn",
-    "state": "NY",
-    "description": "Small-batch bone broth and seasonal soups, sold at the Grand Army Plaza Greenmarket since 2018.",
-    "website": "https://brothmonger.com"
-  },
-  "summary": "<p>Brothmonger started in 2018 as a folding table at the Grand Army Plaza Greenmarket. Sarah Chen cooked everything out of a rented commissary kitchen in Gowanus and loaded Cambros into her station wagon every Saturday morning. The menu was two flavors at first: a 24-hour chicken and a 48-hour beef.</p><p>Six years in, the business had regulars who brought friends, friends who brought coworkers, and a growing list of wholesale accounts — yoga studios, a hospital cafeteria, two specialty grocers in Brooklyn. The commissary was the constraint. We could not grow wholesale without our own kitchen, and we could not keep up with our own retail demand in someone else's kitchen either.</p><p>We talked to two banks. Neither wanted to underwrite a business whose books lived largely on Square and Stripe. We did not want to give up equity. We wanted to stay ours.</p><p>A longtime regular told us about Honeycomb. The pitch made sense immediately — raise capital from the people who already buy broth every Saturday, pay them back with interest, keep the business whole. We launched in October 2025 and closed the raise in 21 days at $100,000 against a $75,000 goal, with 117 investors. Two of them have been regulars since 2019.</p><p>The money is going toward a lease and build-out of our first kitchen in Crown Heights, commercial equipment, and initial inventory for the expanded wholesale program.</p>",
-  "useOfProceeds": "Lease deposit and build-out for first dedicated kitchen in Crown Heights; commercial stock pots, a 60-gallon tilt kettle, and walk-in refrigeration; initial wholesale inventory.",
+  "campaignSlug": "Brothmonger-Brooklyn-Bone-Broth",
+  "campaignId": "abc123",
+  "city": "Brooklyn",
+  "state": "NY",
   "totalFundsRaised": 100000,
   "campaignTargetAmount": 75000,
   "numInvestors": 117,
   "campaignStartDate": "2025-10-14",
   "campaignExpirationDate": "2025-11-04",
-  "investmentType": "Debt",
-  "annualInterestRate": 10,
-  "loanDuration": "36 months",
+  "summary": "<p>Brothmonger started in 2018 as a folding table at the Grand Army Plaza Greenmarket. Sarah Chen cooked everything out of a rented commissary kitchen in Gowanus and loaded Cambros into her station wagon every Saturday morning. The menu was two flavors at first: a 24-hour chicken and a 48-hour beef.</p><p>Six years in, the business had regulars who brought friends, friends who brought coworkers, and a growing list of wholesale accounts — yoga studios, a hospital cafeteria, two specialty grocers in Brooklyn. The commissary was the constraint. We could not grow wholesale without our own kitchen, and we could not keep up with our own retail demand in someone else's kitchen either.</p><p>We talked to two banks. Neither wanted to underwrite a business whose books lived largely on Square and Stripe. We did not want to give up equity. We wanted to stay ours.</p><p>A longtime regular told us about Honeycomb. The pitch made sense immediately — raise capital from the people who already buy broth every Saturday, pay them back with interest, keep the business whole. We launched in October 2025 and closed the raise in 21 days at $100,000 against a $75,000 goal, with 117 investors. Two of them have been regulars since 2019.</p><p>The money is going toward a lease and build-out of our first kitchen in Crown Heights, commercial equipment, and initial inventory for the expanded wholesale program.</p>",
+  "useOfProceeds": "Lease deposit and build-out for first dedicated kitchen in Crown Heights; commercial stock pots, a 60-gallon tilt kettle, and walk-in refrigeration; initial wholesale inventory.",
+  "issuerWebsite": "https://brothmonger.com",
+  "issuerDescription": "Small-batch bone broth and seasonal soups, sold at the Grand Army Plaza Greenmarket since 2018.",
+  "ogImageUrl": "https://storage.googleapis.com/honeycomb-uploads/brothmonger-kitchen.jpg",
   "todayISO": "2026-04-24"
 }
 ```
@@ -987,7 +981,7 @@ Study the shape.
   "slug": "brothmonger-brooklyn-bone-broth",
   "niche": "bone broth and soup maker",
   "industry": "Food & Beverage",
-  "systemSchemaJson": "[{\"@context\":\"https://schema.org\",\"@type\":\"FoodEstablishment\",\"name\":\"Brothmonger\",\"description\":\"Small-batch bone broth and seasonal soups, based in Brooklyn, NY.\",\"url\":\"https://brothmonger.com\",\"address\":{\"@type\":\"PostalAddress\",\"addressLocality\":\"Brooklyn\",\"addressRegion\":\"NY\",\"addressCountry\":\"US\"},\"keywords\":\"bone broth maker Brooklyn NY, small-batch bone broth shop, community-funded food and beverage, funding a first kitchen Brooklyn, Crown Heights food business, investment crowdfunding restaurant, Food & Beverage\"},{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Brothmonger closed at 133 percent of goal in 21 days — funded by 117 neighbors\",\"description\":\"Brothmonger raised $100,000 from 117 neighbors to open a first kitchen in Brooklyn. See how community lending funded a Crown Heights bone broth shop.\",\"datePublished\":\"2026-04-24\",\"author\":{\"@type\":\"Organization\",\"name\":\"Honeycomb Credit\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Honeycomb Credit\",\"url\":\"https://honeycombcredit.com\"},\"about\":{\"@type\":\"FoodEstablishment\",\"name\":\"Brothmonger\"},\"keywords\":\"bone broth maker Brooklyn NY, small-batch bone broth shop, community-funded food and beverage, funding a first kitchen Brooklyn, Crown Heights food business, investment crowdfunding restaurant, Food & Beverage\"}]"
+  "systemSchemaJson": "[{\"@context\":\"https://schema.org\",\"@id\":\"#business\",\"@type\":\"FoodEstablishment\",\"name\":\"Brothmonger\",\"description\":\"Small-batch bone broth and seasonal soups, based in Brooklyn, NY.\",\"url\":\"https://brothmonger.com\",\"address\":{\"@type\":\"PostalAddress\",\"addressLocality\":\"Brooklyn\",\"addressRegion\":\"NY\",\"addressCountry\":\"US\"},\"keywords\":\"bone broth maker Brooklyn NY, small-batch bone broth shop, community-funded food and beverage, funding a first kitchen Brooklyn, Crown Heights food business, investment crowdfunding restaurant, Food & Beverage\"},{\"@context\":\"https://schema.org\",\"@type\":\"Article\",\"headline\":\"Brothmonger closed at 133 percent of goal in 21 days — funded by 117 neighbors\",\"description\":\"Brothmonger raised $100,000 from 117 neighbors to open a first kitchen in Brooklyn. See how community lending funded a Crown Heights bone broth shop.\",\"datePublished\":\"2026-04-24\",\"author\":{\"@type\":\"Organization\",\"name\":\"Honeycomb Credit\",\"url\":\"https://honeycombcredit.com\"},\"publisher\":{\"@type\":\"Organization\",\"name\":\"Honeycomb Credit\",\"url\":\"https://honeycombcredit.com\"},\"about\":{\"@id\":\"#business\"},\"keywords\":\"bone broth maker Brooklyn NY, small-batch bone broth shop, community-funded food and beverage, funding a first kitchen Brooklyn, Crown Heights food business, investment crowdfunding restaurant, Food & Beverage\"}]"
 }
 ```
 
