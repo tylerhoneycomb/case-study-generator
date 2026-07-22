@@ -18,7 +18,7 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -33,6 +33,13 @@ the case studies live as MDX files in this repo.
        │   site rebuild         │  Live within ~2 min of any commit to main.
        └────────────────────────┘
 ```
+
+> ⚠ **The daily cron schedule is currently paused** (since 2026-06-09, per operator
+> request, to stop Anthropic API spend while the project is on hold). The
+> `schedule:` trigger in `.github/workflows/detect.yml` is commented out;
+> `workflow_dispatch` still works, so detection can be run manually from the
+> Actions tab or re-armed by uncommenting the schedule block. New funded
+> campaigns will **not** be auto-published until the cron is re-armed.
 
 The same pipeline is also reachable manually:
 
@@ -52,7 +59,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +69,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -100,9 +107,11 @@ src/
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
   layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd,
+                             BaseHead, SiteHeader, SiteFooter
 public/
   og/                     ← hero / OG images, one per case study
+  demo/                   ← noindex design demos (e.g. floating-cta.html)
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
@@ -167,3 +176,4 @@ Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill iss
 - **Founder-level input data.** Current input payload (campaign summary + use-of-proceeds + metrics) doesn't include the founder's name, photo, or verbatim Q&A. The "Ask The Founders" tab on each campaign page would unlock this and is the single biggest quality lever still on the roadmap. See `prompts/case-study-prompt.md` §6 for what the prompt does to compensate today.
 - **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-1 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "1/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
 - **Pre-2026 historical campaigns are not auto-published.** The PostHog detection query floors at `campaignexpirationdate >= '2026-01-01'`. ~570 historical funded campaigns are visible to PostHog but intentionally skipped by the cron — Tyler will hand-pick any he wants published via the Backfill Issue Form.
+- **No code-level HTML sanitization on the `story` field.** `prompts/case-study-prompt.md` §11 gives Claude an HTML tag allowlist, but that's a prompt instruction only — `scripts/lib/schemas.ts`, `scripts/lib/mdx.ts`, and the Astro MDX render pipeline (`src/pages/[...slug].astro`) apply no sanitization or tag-stripping. Any tag the model emits (a stray `<script>`, `<iframe>`, or event-handler attribute) ships to the live page verbatim. `src/components/JsonLd.astro` already escapes its one known breakout vector for the JSON-LD blob; the prose `story` body has no equivalent guard. Low risk in practice (the scraped `summary` field is the only externally-influenced input reaching the model, and the humanization validator does not check for markup), but worth a rehype-sanitize pass if this is ever hardened.
