@@ -18,7 +18,7 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -34,6 +34,14 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
+> ⚠ **The daily cron is currently paused.** Per Tyler's request (2026-06-09), `detect.yml`'s
+> `schedule` trigger is commented out to stop steady-state Anthropic spend while the project
+> is on hold — no campaigns are auto-detected or auto-published right now. `workflow_dispatch`
+> is still wired up, so a one-off scan can be fired manually from the Actions tab, and the
+> manual/portal/slash-command paths below are unaffected. Resume by uncommenting the `schedule`
+> block in `.github/workflows/detect.yml`. Last automated run: 2026-06-01 (see
+> [`.state/detection-log.md`](.state/detection-log.md)).
+
 The same pipeline is also reachable manually:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
@@ -46,13 +54,18 @@ All three converge on the same audit log (Issues tab) and use the same `scripts/
 
 The full operator README — quickstart, sharing access, costs, troubleshooting, "How it works" deep-dive — lives on the portal at `/admin`. It's collapsed under a `⚠ Read me first` block; click to expand. Send that URL to a coworker rather than this file.
 
+## Site features
+
+- **Metrics strip** (`MetricsStrip.astro`) — three tiles per case study: Raised / Investors / Time to fund. Progress-to-goal was removed as a headline figure (goal-related frontmatter fields no longer exist); the raise-vs-target narrative, when it matters, lives in the prose instead (`prompts/case-study-prompt.md` §6 Beat 4).
+- **Floating CTA bar** (`FloatingCta.astro`) — a dismissible "Get prequalified today!" bar on every case study, purple, reveal-on-scroll, with its own `utm_term=floating_bar` for attribution separate from the in-page CTAs. Built with a11y in mind (`inert`/`aria-hidden` kept in lockstep, focus management, visible focus ring, larger tap target) and hidden from print. A noindex design demo lives at `/demo/floating-cta.html`.
+
 ## Stack
 
 - **Astro 5** + TypeScript (strict, `noUncheckedIndexedAccess`) + Tailwind + MDX content collections
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +75,10 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env; `detect.ts` and `resolve.ts` also need `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID` (see `.env.example`). In CI all four are wired up via repo secrets.
 
 ```bash
 npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
@@ -99,10 +112,11 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating bar)
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
+  demo/floating-cta.html  ← noindex design demo for the floating CTA bar
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
@@ -121,7 +135,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← daily cron (currently paused — see "How it works" above)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -137,7 +151,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron run after PR #29; appended thereafter. No new rows since 2026-06-01 — the cron has been paused (see "How it works" above) |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
