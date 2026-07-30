@@ -3,16 +3,27 @@
 The Collateral Development Agent. A static site at
 [funded.honeycombcredit.com](https://funded.honeycombcredit.com) that
 publishes a case study for every funded Honeycomb Credit campaign. The
-**repo itself is the agent** — GitHub Actions runs the detection cron,
-operators drive ad-hoc actions through GitHub Issues and a web portal, and
-the case studies live as MDX files in this repo.
+**repo itself is the agent** — GitHub Actions runs the detection cron
+(when armed; see below), operators drive ad-hoc actions through GitHub
+Issues and a web portal, and the case studies live as MDX files in this
+repo.
+
+> ⚠ **The daily detection cron is currently paused.** Per Tyler
+> (2026-06-09), the `schedule` triggers in [`detect.yml`](.github/workflows/detect.yml)
+> are commented out to stop steady-state Anthropic spend while the project
+> is on hold — no campaign is auto-published without a human triggering it.
+> `.state/detection-log.md` has no rows since 2026-06-01 as a result. Manual
+> paths (operator portal, slash commands, Issue Forms, and one-off
+> `workflow_dispatch` runs of `detect.yml` from the Actions tab) are
+> unaffected and are how every case study since has been published. Resume
+> automated detection by uncommenting the `schedule:` block in `detect.yml`.
 
 | Surface | URL |
 |---|---|
 | **Live site** | https://funded.honeycombcredit.com |
 | **Operator portal** (you'll be here most of the time) | https://funded.honeycombcredit.com/admin |
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
-| **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
+| **Daily cron heartbeat** (no-email file log; stale while the cron is paused, see above) | [`.state/detection-log.md`](.state/detection-log.md) |
 
 ## How it works
 
@@ -20,8 +31,9 @@ the case studies live as MDX files in this repo.
        ┌────────────────────────┐
        │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
-                    │
+       │   [CURRENTLY PAUSED]   │  filters out already-published, newest first.
+       └────────────┬───────────┘  Re-armed via workflow_dispatch or by
+                    │              uncommenting the schedule: block.
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
@@ -34,7 +46,8 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
-The same pipeline is also reachable manually:
+The same pipeline is also reachable manually — this is the primary path
+while the cron is paused:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
 - **Slash commands** — `/funded generate|redraft|delete|status|cost-estimate|inspect <slug>` in any issue/PR comment by a repo collaborator
@@ -52,7 +65,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +75,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -99,10 +112,11 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating bar)
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
+  demo/                   ← noindex design demos (e.g. floating-cta.html)
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
@@ -121,7 +135,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 12:07 UTC daily (currently paused, see note above; workflow_dispatch still works)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
