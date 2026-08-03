@@ -16,9 +16,15 @@ the case studies live as MDX files in this repo.
 
 ## How it works
 
+> ⚠ **Daily cron is currently paused** (per Tyler, 2026-06-09) to stop steady-state
+> Anthropic API spend while the project is on hold. `workflow_dispatch` stays
+> active, so a run can still be fired manually from the Actions tab. Resume by
+> uncommenting the `schedule:` block in `.github/workflows/detect.yml`. See
+> [`.state/detection-log.md`](.state/detection-log.md) for the last automated run.
+
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron (paused)  │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -52,7 +58,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +68,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -86,7 +92,9 @@ resolve names → copy the fundable slugs into a Backfill (`scripts/backfill.ts`
 or the Backfill issue form). This keeps name-hunting off the paid generation
 path, so a name that doesn't exist or never funded costs nothing and never
 fires a doomed pipeline run. Needs `POSTHOG_API_KEY` + `POSTHOG_PROJECT_ID`
-(same secrets the detect cron uses).
+(same secrets the detect cron uses). Punctuation-only tokens (`"&"`, `"-"`,
+`"'"`) are always reported as not-found without a PostHog round trip — a
+name needs at least one alphanumeric character to be queryable.
 
 ## Repo layout
 
@@ -100,7 +108,7 @@ src/
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
   layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
   CNAME                   ← funded.honeycombcredit.com
@@ -121,7 +129,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← daily cron, currently PAUSED (see note above); workflow_dispatch still works
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -137,7 +145,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron run after PR #29; appended on every run. **No new rows since the cron was paused 2026-06-09** — last row reflects the last automated run, not "today." |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
