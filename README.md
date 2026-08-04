@@ -14,12 +14,14 @@ the case studies live as MDX files in this repo.
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
 | **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
 
+> ⚠ **Daily cron is paused.** Both `schedule` slots in `detect.yml` were commented out on 2026-06-09 per Tyler, to stop steady-state Anthropic API spend while the project is on hold — see `.github/workflows/detect.yml` for the note and how to resume. `workflow_dispatch` (manual run from the Actions tab) still works, and that's how case studies have been published since (backfill / manual generate). `.state/detection-log.md` last recorded an automated run on 2026-06-01; treat any gap after that as expected, not broken.
+
 ## How it works
 
 ```
        ┌────────────────────────┐
        │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │   (PAUSED, see above)  │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
@@ -52,7 +54,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +64,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -99,10 +101,11 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating bar)
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
+  demo/                   ← noindex design demos (e.g. floating-cta.html), not linked from the site
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
@@ -164,6 +167,7 @@ Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill iss
 
 ## Known gaps
 
+- **Daily cron is paused.** See the note under "How it works" above. Newly-funded campaigns are not being auto-detected or auto-published; publishing since 2026-06-09 has gone through manual `workflow_dispatch` / backfill only. Resume by uncommenting the `schedule` block in `.github/workflows/detect.yml`.
 - **Founder-level input data.** Current input payload (campaign summary + use-of-proceeds + metrics) doesn't include the founder's name, photo, or verbatim Q&A. The "Ask The Founders" tab on each campaign page would unlock this and is the single biggest quality lever still on the roadmap. See `prompts/case-study-prompt.md` §6 for what the prompt does to compensate today.
 - **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-1 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "1/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
 - **Pre-2026 historical campaigns are not auto-published.** The PostHog detection query floors at `campaignexpirationdate >= '2026-01-01'`. ~570 historical funded campaigns are visible to PostHog but intentionally skipped by the cron — Tyler will hand-pick any he wants published via the Backfill Issue Form.
