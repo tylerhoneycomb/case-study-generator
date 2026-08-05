@@ -34,6 +34,18 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
+> ⚠ **The cron is currently paused.** Per Tyler (2026-06-09), the `schedule`
+> triggers in `detect.yml` are commented out to stop steady-state Anthropic
+> spend while the project is on hold — see `.state/detection-log.md` for the
+> last automated run (2026-06-01) and the pause commit for the rationale.
+> `workflow_dispatch` is still live, so the cron can be re-armed for a single
+> run from the Actions tab without editing the workflow; resume the daily
+> schedule by uncommenting the two `cron:` lines in `detect.yml`. New funded
+> campaigns are **not** auto-detected while paused — publish them via the
+> operator portal, a slash command, or the Backfill Issue Form instead (see
+> below). None of this affects `on-comment.yml` / `on-issue.yml`, which only
+> fire on explicit operator action.
+
 The same pipeline is also reachable manually:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
@@ -52,7 +64,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +74,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -99,10 +111,13 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating bar)
+  components/             ← Hero, MetricsStrip (3-tile: Raised/Investors/Time-to-fund),
+                            Quote, Cta, FloatingCta (dismissible scroll-reveal bar,
+                            utm_term=floating_bar), JsonLd, BaseHead, SiteHeader, SiteFooter
 public/
   og/                     ← hero / OG images, one per case study
+  demo/floating-cta.html  ← noindex design demo for FloatingCta (not part of the site nav)
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
@@ -138,6 +153,8 @@ prompts/
 | File | What it shows | Created when |
 |---|---|---|
 | [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+
+> ⚠ `.state/detection-log.md`'s last row is 2026-06-01 — the cron has been paused since 2026-06-09 (see "How it works" above), so no new rows are appended until it's re-armed.
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
