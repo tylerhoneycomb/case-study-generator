@@ -34,6 +34,14 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
+> ⚠ **The scheduled cron is currently paused** (per Tyler, 2026-06-09) to stop
+> steady-state Anthropic spend while the project is on hold — see the
+> commented-out `schedule:` block in
+> [`detect.yml`](.github/workflows/detect.yml). `workflow_dispatch` still
+> works, so detection can be run one-off from the Actions tab, and every
+> case study published since the pause has gone through manual/backfill
+> triggers instead. Resume by uncommenting the two `cron:` lines.
+
 The same pipeline is also reachable manually:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
@@ -52,7 +60,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +70,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -74,7 +82,9 @@ npx tsx scripts/generate.ts <slug>           # ~$0.45 spend
 npx tsx scripts/redraft.ts <slug> --feedback="..."
 npx tsx scripts/delete.ts <slug>
 npx tsx scripts/backfill.ts --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
-npx tsx scripts/detect.ts [--dry-run]        # the cron entry point
+npx tsx scripts/detect.ts [--dry-run]        # the cron entry point (currently paused, see below)
+npx tsx scripts/status.ts [--issue=N]        # rate-limit usage + last cron run, no spend
+npx tsx scripts/cost-estimate.ts <slug>...   # estimate generation cost, no spend
 ```
 
 **Finding a campaign by name (cheaply).** When you have a business *name* but
