@@ -18,8 +18,8 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │   two-slot daily cron  │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   (04:47 + 11:23 UTC)  │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
@@ -52,7 +52,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +62,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (65 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -111,7 +111,9 @@ scripts/
     posthog.ts            ← HogQL client — funded-slug discovery + name→slug resolver
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
-    humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
+    humanize.ts           ← AI-tells regex validator; reads from humanization-rules.ts
+    humanization-rules.ts ← single source of truth for banned phrases/vocabulary/openers;
+                            read by both the validator and the runtime prompt substitutions
     ratelimit.ts          ← 1/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
@@ -121,7 +123,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← two-slot daily cron (04:47 UTC + 11:23 UTC); idempotent
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -137,7 +139,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron run after PR #29; appended on every subsequent run (including zero-activity days) |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -150,6 +152,10 @@ Three layered Zod schemas, each gating a different boundary:
 | `scripts/lib/schemas.ts` `CampaignSchema` | Honeycomb scrape payload | Scrape fails, tracking issue gets `error` label |
 
 When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches it — defensive parsing with explicit field-presence checks.
+
+### Humanization retry policy
+
+After Claude generates a draft, `scripts/lib/humanize.ts` validates the story body for AI-writing tells (banned vocabulary, hedge phrases, tricolon density, em-dash density, generic openers). On the first failure the pipeline re-calls Claude once with the validator's flagged issues injected as feedback. If the retry also fails, the pipeline **publishes anyway** and the tracking issue gets a `humanization-warning` label so the page can be found and redrafted. This is a soft gate (two-attempt), not a hard one — the rationale is that a hard gate left funded campaigns with no published case study at all (empirically, pre-policy). The runtime prompt (`prompts/case-study-prompt.md` §13.5) still describes the validator as a hard gate; that framing is intentional motivation for the model, not a system-level guarantee.
 
 ## Cost and rate model
 
