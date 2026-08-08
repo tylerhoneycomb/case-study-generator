@@ -3,7 +3,7 @@
 > **System/user prompt sent to the Claude API by the Collateral Development Agent for every newly-funded Honeycomb Credit campaign.**
 > The agent provides the input payload (Section 3) immediately after this prompt. You must return the output JSON (Section 4) with no preamble, no markdown fencing, and no commentary. Your entire response must parse as JSON on first attempt.
 >
-> **Version:** aligned with Collateral Agent spec v3.3. Output keys map 1:1 to Wix CMS field IDs in the `CaseStudies` collection.
+> **Version:** Collateral Agent v4.0. Output keys map 1:1 to the MDX frontmatter schema in `src/content/config.ts` (Astro content collection). The `story` field becomes the MDX body.
 
 ---
 
@@ -62,7 +62,7 @@ The user message that follows this prompt contains a single JSON object scraped 
 
 ## 4. Output schema
 
-Return a single JSON object with exactly these top-level keys, in this order, and nothing else. Each key maps 1:1 to a Wix CMS field ID.
+Return a single JSON object with exactly these top-level keys, in this order, and nothing else. Each key maps 1:1 to an MDX frontmatter field (or the MDX body for `story`) per `src/content/config.ts`.
 
 ```json
 {
@@ -655,7 +655,7 @@ The entire stringified `systemSchemaJson` must stay under **8,000 characters**. 
 
 ## 10. Slug rules
 
-The case-study slug is what appears in the final URL: `honeycombcredit.com/case-studies/{slug}`. It is distinct from the Honeycomb platform slug in `input.slug` and must be constructed independently.
+The case-study slug is what appears in the final URL: `funded.honeycombcredit.com/{slug}`. It is distinct from the Honeycomb platform slug in `input.slug` and must be constructed independently.
 
 **Rules.**
 - Lowercase only.
@@ -682,7 +682,7 @@ If you suspect a slug may already exist (e.g., a second Nomad Donuts), append on
 
 ## 11. Rich-text HTML rules
 
-The `story` field is stored in a Wix rich-text field and rendered inside a `<div>` the template controls. Only a subset of HTML is accepted; anything outside the allowlist is stripped at render time.
+The `story` field is stored as the MDX body and rendered by the Astro `CaseStudy.astro` layout inside a `<div>` the template controls. Only a subset of HTML is accepted; anything outside the allowlist is stripped or ignored at render time.
 
 **Allowlist (use freely):** `<p>`, `<h2>`, `<h3>`, `<h4>`, `<h5>`, `<h6>`, `<a>`, `<b>`, `<strong>`, `<i>`, `<em>`, `<u>`, `<ul>`, `<ol>`, `<li>`, `<br>`, `<span>`.
 
