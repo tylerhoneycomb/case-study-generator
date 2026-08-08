@@ -3,7 +3,7 @@
 > **System/user prompt sent to the Claude API by the Collateral Development Agent for every newly-funded Honeycomb Credit campaign.**
 > The agent provides the input payload (Section 3) immediately after this prompt. You must return the output JSON (Section 4) with no preamble, no markdown fencing, and no commentary. Your entire response must parse as JSON on first attempt.
 >
-> **Version:** aligned with Collateral Agent spec v3.3. Output keys map 1:1 to Wix CMS field IDs in the `CaseStudies` collection.
+> **Version:** aligned with Collateral Agent spec v3.3. Output keys map 1:1 to MDX frontmatter fields defined in `src/content/config.ts` (Astro content collection).
 
 ---
 
@@ -62,7 +62,7 @@ The user message that follows this prompt contains a single JSON object scraped 
 
 ## 4. Output schema
 
-Return a single JSON object with exactly these top-level keys, in this order, and nothing else. Each key maps 1:1 to a Wix CMS field ID.
+Return a single JSON object with exactly these top-level keys, in this order, and nothing else. Each key maps 1:1 to a frontmatter field in the published MDX file (validated by the Astro content collection schema in `src/content/config.ts`).
 
 ```json
 {
@@ -682,7 +682,7 @@ If you suspect a slug may already exist (e.g., a second Nomad Donuts), append on
 
 ## 11. Rich-text HTML rules
 
-The `story` field is stored in a Wix rich-text field and rendered inside a `<div>` the template controls. Only a subset of HTML is accepted; anything outside the allowlist is stripped at render time.
+The `story` field is written as HTML into an MDX file and rendered by the Astro layout (`src/layouts/CaseStudy.astro`). Only a subset of HTML is accepted; tags outside the allowlist are stripped or misrendered at build time.
 
 **Allowlist (use freely):** `<p>`, `<h2>`, `<h3>`, `<h4>`, `<h5>`, `<h6>`, `<a>`, `<b>`, `<strong>`, `<i>`, `<em>`, `<u>`, `<ul>`, `<ol>`, `<li>`, `<br>`, `<span>`.
 
