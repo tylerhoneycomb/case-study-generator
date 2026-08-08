@@ -18,8 +18,8 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
-       │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
+       │  04:47 / 11:23 UTC     │  detect.yml — queries PostHog (Fivetran-mirrored
+       │  cron (detect.yml)     │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
@@ -121,7 +121,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← crons at 04:47 UTC and 11:23 UTC (two daily slots)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
