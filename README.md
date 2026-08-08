@@ -18,15 +18,16 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   two-slot daily cron  │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
        │   per-slug pipeline    │  scrape → Claude (prompts/case-study-prompt.md)
-       │                        │  → humanization validator → image fetch
-       └────────────┬───────────┘  → MDX commit → push.
+       │                        │  → humanization validator (retries once with
+       └────────────┬───────────┘  feedback; publishes regardless) → image fetch
+                                   → MDX commit → push.
                     │
                     ▼
        ┌────────────────────────┐  deploy.yml — Astro build, GitHub Pages deploy.
@@ -52,7 +53,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 63-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +63,10 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (63 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. `scripts/detect.ts` additionally requires `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID`. In CI all four are wired up via repo secrets.
 
 ```bash
 npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
@@ -121,7 +122,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← two-slot daily cron (04:47 UTC + 11:23 UTC)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -137,7 +138,7 @@ prompts/
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Cron heartbeat (one row per slot; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First cron slot; appended on every run thereafter |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -160,7 +161,7 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
 
-Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
+Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. For the daily cron, rate-deferred candidates are silently logged to `.state/detection-log.md` (no issue opened) and re-processed automatically on the next cron slot. For a manual `/funded generate` that hits the cap, the existing tracking issue gets a `queued` label and the pipeline exits cleanly.
 
 ## Known gaps
 
