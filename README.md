@@ -12,7 +12,9 @@ the case studies live as MDX files in this repo.
 | **Live site** | https://funded.honeycombcredit.com |
 | **Operator portal** (you'll be here most of the time) | https://funded.honeycombcredit.com/admin |
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
-| **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
+| **Cron heartbeat log** | [`.state/detection-log.md`](.state/detection-log.md) |
+
+> ⚠ **Daily cron is currently PAUSED** (since 2026-06-09). Re-arm by uncommenting the `schedule:` block in `.github/workflows/detect.yml`, or trigger a one-off run from Actions → detect → Run workflow.
 
 ## How it works
 
@@ -20,7 +22,8 @@ the case studies live as MDX files in this repo.
        ┌────────────────────────┐
        │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │   [PAUSED 2026-06-09]  │  filters out already-published, newest first.
+       └────────────┬───────────┘
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -52,7 +55,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 65-test suite gate every deploy
 
 ## Local development
 
@@ -100,7 +103,7 @@ src/
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
   layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  components/             ← FloatingCta, Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
   CNAME                   ← funded.honeycombcredit.com
@@ -145,7 +148,7 @@ Three layered Zod schemas, each gating a different boundary:
 
 | File | Validates | Failure mode |
 |---|---|---|
-| `src/content/config.ts` | MDX frontmatter at build time | Astro build fails, deploy doesn't ship |
+| `src/content/config.ts` | MDX frontmatter at build time (28 fields) | Astro build fails, deploy doesn't ship |
 | `scripts/lib/schemas.ts` `ClaudeOutputSchema` | Claude's 14-key JSON response | Generation fails, tracking issue gets `error` label |
 | `scripts/lib/schemas.ts` `CampaignSchema` | Honeycomb scrape payload | Scrape fails, tracking issue gets `error` label |
 
