@@ -14,13 +14,24 @@ the case studies live as MDX files in this repo.
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
 | **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
 
+> ⚠ **Daily cron is currently PAUSED** (per Tyler, 2026-06-09) to stop steady-state
+> Anthropic API spend while the project is on hold. `detect.yml`'s `schedule`
+> trigger is commented out; `workflow_dispatch` still works, so a one-off scan
+> can be fired manually from the Actions tab. Manual/portal/slash-command
+> generation and the `on-comment.yml` / `on-issue.yml` dispatchers are
+> unaffected — only the automatic daily scan is off. See
+> [`.github/workflows/detect.yml`](.github/workflows/detect.yml) to re-arm
+> (uncomment the `schedule:` block) and [`.state/detection-log.md`](.state/detection-log.md)
+> for the last row written before the pause (2026-06-01).
+
 ## How it works
 
 ```
        ┌────────────────────────┐
        │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │   *currently PAUSED*   │  filters out already-published, newest first.
+       └────────────┬───────────┘  (schedule trigger disabled; see note above)
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -34,7 +45,7 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
-The same pipeline is also reachable manually:
+The same pipeline is also reachable manually — this is the primary path while the cron is paused:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
 - **Slash commands** — `/funded generate|redraft|delete|status|cost-estimate|inspect <slug>` in any issue/PR comment by a repo collaborator
@@ -52,7 +63,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +73,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -99,10 +110,11 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating CTA bar)
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
+  demo/floating-cta.html  ← noindex design comparison for the floating CTA bar
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
