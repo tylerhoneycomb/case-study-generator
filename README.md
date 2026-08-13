@@ -14,13 +14,23 @@ the case studies live as MDX files in this repo.
 | **Audit log** (every action, every cron run) | https://github.com/tylerhoneycomb/case-study-generator/issues |
 | **Daily cron heartbeat** (no-email file log) | [`.state/detection-log.md`](.state/detection-log.md) |
 
+> ⏸ **The daily cron is currently paused.** `detect.yml`'s `schedule:` trigger
+> has been commented out since 2026-06-09, per operator request, to stop
+> steady-state Anthropic spend while the project is on hold — see the
+> "PAUSED" block at the top of [`.github/workflows/detect.yml`](.github/workflows/detect.yml).
+> `workflow_dispatch` stays live, so the same detection run can still be
+> fired manually from the Actions tab, and the portal / slash commands /
+> Issue Forms below are unaffected — only unattended auto-publishing is off.
+> Resume by uncommenting the `schedule:` block in that file.
+
 ## How it works
 
 ```
        ┌────────────────────────┐
        │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
-       └────────────┬───────────┘  filters out already-published, newest first.
+       │   [currently paused]   │  filters out already-published, newest first.
+       └────────────┬───────────┘
                     │
                     ▼
        ┌────────────────────────┐  scripts/lib/pipeline.ts
@@ -34,7 +44,8 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
-The same pipeline is also reachable manually:
+The same pipeline is also reachable manually — and, while the cron is
+paused, is the only way new case studies get published:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
 - **Slash commands** — `/funded generate|redraft|delete|status|cost-estimate|inspect <slug>` in any issue/PR comment by a repo collaborator
@@ -52,7 +63,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +73,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -70,7 +81,7 @@ Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in e
 ```bash
 npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
 npx tsx scripts/inspect.ts <slug>            # diagnostic, no spend
-npx tsx scripts/generate.ts <slug>           # ~$0.45 spend
+npx tsx scripts/generate.ts <slug>           # ~$0.45 spend (rate-limited: 1/day default)
 npx tsx scripts/redraft.ts <slug> --feedback="..."
 npx tsx scripts/delete.ts <slug>
 npx tsx scripts/backfill.ts --slugs="A\nB\nC" [--force] [--dry-run] [--rate=N]
@@ -99,10 +110,11 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating bar)
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
+  demo/floating-cta.html  ← noindex design reference for the floating CTA bar
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
@@ -121,7 +133,7 @@ scripts/
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← cron at 12:07 UTC daily (schedule currently paused; workflow_dispatch still works)
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -133,11 +145,20 @@ prompts/
   case-study-prompt.md  ← runtime prompt sent to Claude on every generation
 ```
 
+## Floating CTA bar
+
+Every case study renders a purple, dismissible "Get prequalified today!" bar
+(`src/components/FloatingCta.astro`, wired into `CaseStudy.astro`) that
+reveals on scroll and links out with `utm_term=floating_bar` so its
+conversions are attributed separately from the in-body `Cta.astro` block. A
+noindex design reference lives at `/demo/floating-cta.html`
+(`public/demo/floating-cta.html`).
+
 ### Operational state (live status)
 
 | File | What it shows | Created when |
 |---|---|---|
-| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
+| [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter — **stopped accumulating new rows 2026-06-09 when the cron was paused** (see note near the top of this README) |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
 
@@ -160,10 +181,10 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
 
-Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
+Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones — while it's paused, queued issues sit until someone runs `detect.yml` manually or the schedule is resumed.
 
 ## Known gaps
 
 - **Founder-level input data.** Current input payload (campaign summary + use-of-proceeds + metrics) doesn't include the founder's name, photo, or verbatim Q&A. The "Ask The Founders" tab on each campaign page would unlock this and is the single biggest quality lever still on the roadmap. See `prompts/case-study-prompt.md` §6 for what the prompt does to compensate today.
-- **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-1 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "1/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
+- **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-1 budget. In practice this hasn't caused over-spend (the cron, when active, runs once per day; backfill caps itself; manual ops are infrequent) but the documented "1/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
 - **Pre-2026 historical campaigns are not auto-published.** The PostHog detection query floors at `campaignexpirationdate >= '2026-01-01'`. ~570 historical funded campaigns are visible to PostHog but intentionally skipped by the cron — Tyler will hand-pick any he wants published via the Backfill Issue Form.
