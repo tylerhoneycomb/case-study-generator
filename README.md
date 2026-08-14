@@ -18,7 +18,7 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -33,6 +33,16 @@ the case studies live as MDX files in this repo.
        │   site rebuild         │  Live within ~2 min of any commit to main.
        └────────────────────────┘
 ```
+
+> ⚠ **The daily cron is currently paused.** Both `schedule` slots in
+> `detect.yml` are commented out (per Tyler, 2026-06-09) to stop steady-state
+> Anthropic spend while the project is on hold — see the commit message on
+> `chore(detect): pause daily cron until further notice` for the full
+> rationale. `workflow_dispatch` is still live, so the same pipeline can be
+> fired manually from the Actions tab, and all three manual surfaces below
+> are unaffected. Resume by uncommenting the `schedule:` block in
+> `.github/workflows/detect.yml`. `.state/detection-log.md` last has a row
+> from 2026-06-01 — a stale log is the tell that the cron isn't firing.
 
 The same pipeline is also reachable manually:
 
@@ -52,7 +62,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -158,12 +168,13 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 | Generate or redraft | ~$0.45 per call (Opus 4.7, ~17K input + ~2.7K output tokens) |
 | Inspect / delete / status | $0 |
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
-| Steady state at ~10 funded campaigns/month | ~$5/month |
+| Steady state at ~10 funded campaigns/month | ~$5/month (currently $0 — cron paused, see below) |
 
 Rate limit: **1/day** across all triggers (cron + manual + portal). Backfill issue form can override up to **10/day**. Excess work queues to subsequent days, surfaced via `queued` label on the relevant issues. The cron drains queued issues before scanning for new ones.
 
 ## Known gaps
 
+- **Daily cron is paused.** Both `schedule` slots in `detect.yml` have been commented out since 2026-06-09 per Tyler, to stop steady-state Anthropic spend while the project is on hold. `workflow_dispatch` (manual re-arm from the Actions tab) and the three always-on manual surfaces (portal, slash commands, Issue Forms) are unaffected. Resume by uncommenting the `schedule:` block.
 - **Founder-level input data.** Current input payload (campaign summary + use-of-proceeds + metrics) doesn't include the founder's name, photo, or verbatim Q&A. The "Ask The Founders" tab on each campaign page would unlock this and is the single biggest quality lever still on the roadmap. See `prompts/case-study-prompt.md` §6 for what the prompt does to compensate today.
 - **Rate-limit persistence is per-run, not per-day.** `consume()` in `scripts/lib/ratelimit.ts` writes `.state/ratelimit.json` but the workflows don't commit it back to the repo, so each new workflow invocation starts with a fresh 0-of-1 budget. In practice this hasn't caused over-spend (the cron runs once per day; backfill caps itself; manual ops are infrequent) but the documented "1/day across all triggers" semantic is more permissive than intended. Fix is small (add the file to per-slug commits in `pipeline.ts`); race conditions to think through if multiple workflows overlap.
 - **Pre-2026 historical campaigns are not auto-published.** The PostHog detection query floors at `campaignexpirationdate >= '2026-01-01'`. ~570 historical funded campaigns are visible to PostHog but intentionally skipped by the cron — Tyler will hand-pick any he wants published via the Backfill Issue Form.
