@@ -34,6 +34,14 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
+> ⚠ **The daily cron is currently paused.** Per operator request (2026-06-09),
+> the `schedule:` trigger in `detect.yml` is commented out to stop steady-state
+> Anthropic spend while the project is on hold — no automated detection runs
+> fire. `workflow_dispatch` stays active, so the cron can still be run
+> one-off from the Actions tab, and all manual paths (portal, slash commands,
+> Issue Forms) are unaffected. Resume by uncommenting the `schedule:` block in
+> `.github/workflows/detect.yml`.
+
 The same pipeline is also reachable manually:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
@@ -52,7 +60,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +70,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -155,7 +163,7 @@ When Honeycomb's `__NEXT_DATA__` shape changes, the third schema is what catches
 
 | Item | Cost |
 |---|---|
-| Generate or redraft | ~$0.45 per call (Opus 4.7, ~17K input + ~2.7K output tokens) |
+| Generate or redraft | ~$0.45 per call (Opus 4.7, ~17K input + ~2.8K output tokens) |
 | Inspect / delete / status | $0 |
 | Astro build + Pages deploy | $0 (GitHub Actions free tier) |
 | Steady state at ~10 funded campaigns/month | ~$5/month |
