@@ -18,7 +18,7 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -33,6 +33,16 @@ the case studies live as MDX files in this repo.
        │   site rebuild         │  Live within ~2 min of any commit to main.
        └────────────────────────┘
 ```
+
+> ⚠ **The daily cron is currently paused.** Tyler disabled the `schedule:`
+> triggers in `detect.yml` on 2026-06-09 to stop Anthropic API spend while
+> the project is on hold — see the comment block at the top of that file.
+> `workflow_dispatch` is left enabled, so the same pipeline can still be
+> fired manually (with or without `--dry-run`) from the Actions tab. New
+> campaigns will **not** be auto-detected or auto-published until the
+> `schedule:` lines are uncommented. Manual generation, redraft, delete,
+> inspect, and the resolve/backfill flow below are all unaffected — only
+> automatic daily detection is off.
 
 The same pipeline is also reachable manually:
 
@@ -52,7 +62,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -99,10 +109,12 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating bar)
+  components/             ← Hero, MetricsStrip (Raised/Investors/Time to fund),
+                            Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
+  demo/                   ← noindex static design demos (e.g. floating-cta.html)
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
