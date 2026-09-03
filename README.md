@@ -34,6 +34,15 @@ the case studies live as MDX files in this repo.
        └────────────────────────┘
 ```
 
+> ⚠ **The scheduled cron is currently paused.** Per operator request (Tyler,
+> 2026-06-09), `detect.yml`'s `schedule:` triggers are commented out to stop
+> Anthropic API spend while the project is on hold — see the file for the
+> full note. `workflow_dispatch` is still active, so the same pipeline can be
+> re-armed one-off from the Actions tab (with or without `--dry-run`)
+> without editing the workflow, and generate/redraft/backfill remain fully
+> usable through the portal, slash commands, and Issue Forms below. Resume
+> the daily schedule by uncommenting the `schedule:` block in `detect.yml`.
+
 The same pipeline is also reachable manually:
 
 - **Operator portal** — https://funded.honeycombcredit.com/admin (forms for generate/redraft/delete/inspect; PAT auth in browser, no backend)
@@ -52,7 +61,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,7 +71,7 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
 Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
@@ -100,7 +109,8 @@ src/
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
   layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd,
+                             BaseHead, SiteHeader, SiteFooter
 public/
   og/                     ← hero / OG images, one per case study
   CNAME                   ← funded.honeycombcredit.com
@@ -112,6 +122,8 @@ scripts/
     scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
     claude.ts             ← Anthropic SDK wrapper, output validation
     humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
+    humanization-rules.ts ← shared banned-phrase/opener lists (feeds humanize.ts
+                             validator AND the runtime prompt injected by claude.ts)
     ratelimit.ts          ← 1/day default, 10/day backfill cap, UTC reset
     pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
     github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
