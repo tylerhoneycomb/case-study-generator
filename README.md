@@ -18,7 +18,7 @@ the case studies live as MDX files in this repo.
 
 ```
        ┌────────────────────────┐
-       │   noon-UTC cron        │  detect.yml — queries PostHog (Fivetran-mirrored
+       │   daily cron           │  detect.yml — queries PostHog (Fivetran-mirrored
        │   (detect.yml)         │  postgres.campaigns) for funded slugs ≥ 2026-01-01,
        └────────────┬───────────┘  filters out already-published, newest first.
                     │
@@ -33,6 +33,14 @@ the case studies live as MDX files in this repo.
        │   site rebuild         │  Live within ~2 min of any commit to main.
        └────────────────────────┘
 ```
+
+> ⚠ **The daily cron is currently paused** (since 2026-06-09, per Tyler — to
+> stop steady-state Anthropic spend while the project is on hold). Both
+> `schedule` slots in [`detect.yml`](.github/workflows/detect.yml) are
+> commented out; `workflow_dispatch` stays live, so it can be re-armed
+> one-off from the Actions tab, or resumed permanently by uncommenting the
+> `schedule:` block. Manual triggers (portal, slash commands, Issue Forms)
+> are unaffected and work as normal.
 
 The same pipeline is also reachable manually:
 
@@ -52,7 +60,7 @@ The full operator README — quickstart, sharing access, costs, troubleshooting,
 - **GitHub Pages** from a private repo (GitHub Pro)
 - **GitHub Actions** for cron, on-comment dispatcher, on-issue dispatcher, deploy
 - **Anthropic SDK** with Claude Opus 4.7 for generation (~$0.45 per case study)
-- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 57-test suite gate every deploy
+- **Vitest** for unit tests; `astro sync && tsc --noEmit` + 77-test suite gate every deploy
 
 ## Local development
 
@@ -62,10 +70,10 @@ npm install
 npm run dev        # http://localhost:4321
 npm run build      # static output to dist/
 npm run typecheck  # astro sync && tsc --noEmit
-npm test           # vitest run (57 tests)
+npm test           # vitest run (77 tests)
 ```
 
-Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env. In CI both are wired up via repo secrets and `secrets.GITHUB_TOKEN`.
+Running the agent CLIs locally needs `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` in env; `detect.ts` and `resolve.ts` also need `POSTHOG_API_KEY` + `POSTHOG_PROJECT_ID`. Copy `.env.example` to `.env` and fill in what you need — see that file for the full list (including optional `FUNDED_REPO` and `CASE_STUDY_MODEL` overrides). In CI everything is wired up via repo secrets and `secrets.GITHUB_TOKEN`.
 
 ```bash
 npx tsx scripts/resolve.ts "Biz Name" ...    # name → slug, FREE (PostHog, no Claude, no Action)
@@ -99,29 +107,31 @@ src/
     index.astro           ← directory page
     admin/index.astro     ← operator portal (noindex)
     rss.xml.js            ← /rss.xml
-  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA)
-  components/             ← Hero, MetricsStrip, Quote, Cta, JsonLd, BaseHead, …
+  layouts/CaseStudy.astro ← case-study layout (hero + metrics + body + CTA + floating CTA)
+  components/             ← Hero, MetricsStrip, Quote, Cta, FloatingCta, JsonLd, BaseHead, …
 public/
   og/                     ← hero / OG images, one per case study
+  demo/floating-cta.html  ← noindex design comparison for the floating CTA bar
   CNAME                   ← funded.honeycombcredit.com
 scripts/
   generate.ts redraft.ts delete.ts backfill.ts detect.ts inspect.ts
   resolve.ts status.ts cost-estimate.ts dispatch-comment.ts dispatch-issue.ts
   lib/
-    posthog.ts            ← HogQL client — funded-slug discovery + name→slug resolver
-    scrape.ts             ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
-    claude.ts             ← Anthropic SDK wrapper, output validation
-    humanize.ts           ← AI-tells regex validator (port of velo_humanization.jsw)
-    ratelimit.ts          ← 1/day default, 10/day backfill cap, UTC reset
-    pipeline.ts           ← shared per-slug pipeline used by generate/redraft/backfill
-    github.ts             ← Octokit wrappers (createIssue, addComment, etc.)
-    mdx.ts                ← MDX read/write, idempotency by campaignSlug
-    parse-slugs.ts        ← Backfill input parser (defends against code-fence drift)
+    posthog.ts             ← HogQL client — funded-slug discovery + name→slug resolver
+    scrape.ts              ← __NEXT_DATA__ + HTML extraction (with hero-image fallbacks)
+    claude.ts              ← Anthropic SDK wrapper, output validation
+    humanize.ts            ← AI-tells validator; runs humanization-rules.ts checks post-generation
+    humanization-rules.ts  ← shared banned-word / pattern rules — read by both humanize.ts and the prompt loader
+    ratelimit.ts           ← 1/day default, 10/day backfill cap, UTC reset
+    pipeline.ts            ← shared per-slug pipeline used by generate/redraft/backfill
+    github.ts              ← Octokit wrappers (createIssue, addComment, etc.)
+    mdx.ts                 ← MDX read/write, idempotency by campaignSlug
+    parse-slugs.ts         ← Backfill input parser (defends against code-fence drift)
     image.ts format.ts schemas.ts log.ts git.ts args.ts
 .github/
   workflows/
     deploy.yml            ← Astro build + Pages deploy on push to main
-    detect.yml            ← cron at 12:07 UTC daily
+    detect.yml            ← daily cron entry point (currently PAUSED, see "How it works")
     on-comment.yml        ← /funded slash dispatcher
     on-issue.yml          ← Issue Form dispatcher (routes by title prefix)
   ISSUE_TEMPLATE/
@@ -140,6 +150,8 @@ prompts/
 | [`.state/detection-log.md`](.state/detection-log.md) | Daily cron heartbeat (one row per run; PostHog-returned / already-published / eligible / generated / rate-limit deferred / failed) | First 12:07-UTC cron run after PR #29; appended thereafter |
 
 > ⚠ `.state/ratelimit.json` is written by `consume()` during a workflow run but **not currently committed**. See "Known gaps" below.
+>
+> ⚠ The log's last row is from 2026-06-01 — no new rows since, because the cron has been paused since 2026-06-09 (see "How it works" above). A `workflow_dispatch` run (or resuming the schedule) will resume appending rows.
 
 Three layered Zod schemas, each gating a different boundary:
 
